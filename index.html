@@ -514,7 +514,7 @@ function createBoy(name,side){
   return{name,side,state:"idle",slices:4,stamina:STAMINA_MAX,staminaExhausted:false,
     blockTimer:0,indicator:"",bobPhase:rngf(0,Math.PI*2),
     // AI state
-    aiState:"idle",aiTimer:0,alertness:0.3,personality:name==="Parker"?"cautious":"aggressive"};
+    aiState:"idle",aiTimer:0,alertness:0.3,personality:name==="Bro 2"?"cautious":"aggressive"};
 }
 
 function updateBoyPlayer(boy,isBlocking){
@@ -682,13 +682,13 @@ const GameEngine=(function(){
   let gameState="MODE_SELECT",gameMode="1P",timer=GAME_TIME,dad,boys,particles,popups,taxMeter,inputState,boyInputState,frameCount,lastRating,gameOverReason;
 
   function init(){
-    dad=createDad();boys=[createBoy("Parker","left"),createBoy("Brennan","right")];particles=[];popups=[];taxMeter={total:0,slices:[]};inputState={left:false,right:false};boyInputState={parkerBlocking:false,brennanBlocking:false};frameCount=0;timer=GAME_TIME;lastRating="";gameOverReason="";gameState="MODE_SELECT";
+    dad=createDad();boys=[createBoy("Bro 2","left"),createBoy("Bro 1","right")];particles=[];popups=[];taxMeter={total:0,slices:[]};inputState={left:false,right:false};boyInputState={parkerBlocking:false,brennanBlocking:false};frameCount=0;timer=GAME_TIME;lastRating="";gameOverReason="";gameState="MODE_SELECT";
   }
   function setMode(mode){gameMode=mode;}
   function getMode(){return gameMode;}
 
   function startGame(){
-    dad=createDad();boys=[createBoy("Parker","left"),createBoy("Brennan","right")];particles=[];popups=[];taxMeter={total:0,slices:[]};inputState={left:false,right:false};boyInputState={parkerBlocking:false,brennanBlocking:false};frameCount=0;timer=GAME_TIME;lastRating="";gameOverReason="";gameState="PLAYING";AudioEngine.playMusic();
+    dad=createDad();boys=[createBoy("Bro 2","left"),createBoy("Bro 1","right")];particles=[];popups=[];taxMeter={total:0,slices:[]};inputState={left:false,right:false};boyInputState={parkerBlocking:false,brennanBlocking:false};frameCount=0;timer=GAME_TIME;lastRating="";gameOverReason="";gameState="PLAYING";AudioEngine.playMusic();
   }
 
   function handleInput(keys,mouse,parkerBlock,brennanBlock){
@@ -1093,13 +1093,13 @@ function drawCaesarSalad(cx,cy){
 
 function renderTableItems(){
   const boys=GameEngine.getBoys();
-  // Parker plate + cheese pizza (left)
+  // Bro 2 plate + cheese pizza (left)
   drawPlate(144,TABLE_Y+42,24);
   if(boys[0].slices>0){
     if(boys[0].slices>=3)drawPizzaWhole(144,TABLE_Y+40,18,'cheese');
     else for(let i=0;i<boys[0].slices;i++)drawPizzaSlice(130+i*14,TABLE_Y+34,i*0.4-0.2,'cheese');
   }
-  // Brennan plate + sausage pizza (right)
+  // Bro 1 plate + sausage pizza (right)
   drawPlate(454,TABLE_Y+42,24);
   if(boys[1].slices>0){
     if(boys[1].slices>=3)drawPizzaWhole(454,TABLE_Y+40,18,'sausage');
@@ -1224,7 +1224,7 @@ function drawDadChar(cx,cy,state,bobPhase,time){
 function drawBoyChar(cx,cy,name,state,bobPhase,indicator,time){
   const bob=Math.sin(bobPhase)*2;
   cy+=bob;
-  const isParker=name==='Parker';
+  const isParker=name==='Bro 2';
   const shirtDark=isParker?'#1a3a7a':'#7a1a1a';
   const shirtBase=isParker?'#2a5aaa':'#aa2a2a';
   const shirtLight=isParker?'#4a7acc':'#cc4a4a';
@@ -1326,15 +1326,15 @@ function renderCharacters(time){
     drawStretchyArm(shoulderX,shoulderY,targetX,targetY,dad.reachProgress||0,dad.state==='blocked');
   }
 
-  // Parker (left-bottom)
+  // Bro 2 (left-bottom)
   const pk=boys[0],pkCX=132,pkCY=FLOOR_Y+6+Math.sin(pk.bobPhase)*2;
   let pkState=pk.state==='eating_own'?'eating':pk.state;
-  drawBoyChar(pkCX,pkCY,'Parker',pkState,pk.bobPhase,pk.indicator,time);
+  drawBoyChar(pkCX,pkCY,'Bro 2',pkState,pk.bobPhase,pk.indicator,time);
 
-  // Brennan (right-bottom)
+  // Bro 1 (right-bottom)
   const br=boys[1],brCX=492,brCY=FLOOR_Y+4+Math.sin(br.bobPhase)*2;
   let brState=br.state==='eating_own'?'eating':br.state;
-  drawBoyChar(brCX,brCY,'Brennan',brState,br.bobPhase,br.indicator,time);
+  drawBoyChar(brCX,brCY,'Bro 1',brState,br.bobPhase,br.indicator,time);
 }
 
 function renderEffects(){
@@ -1379,8 +1379,8 @@ function renderHUD(time){
   drawTextShadow('RIGHT CLICK: SAUSAGE',BTN_RIGHT.x+BTN_RIGHT.w/2,BTN_RIGHT.y+10,'#fff','#000',14,'center');
   drawTextShadow(taxMeter.total+'/'+TOTAL_SLICES+' TAXED',W/2,414,'#FFD700','#000',16,'center');
 
-  drawTextShadow('PARKER',132,FLOOR_Y-30,'#4a7acc','#000',13,'center');
-  drawTextShadow('BRENNAN',492,FLOOR_Y-30,'#cc4a4a','#000',13,'center');
+  drawTextShadow('BRO 2',132,FLOOR_Y-30,'#4a7acc','#000',13,'center');
+  drawTextShadow('BRO 1',492,FLOOR_Y-30,'#cc4a4a','#000',13,'center');
 
   // Stamina bars
   const stBoys=GameEngine.getBoys();
@@ -1461,14 +1461,14 @@ function renderTitle(time){
 
   if(mode==='1P'){
     drawTextShadow('You are DAD - steal pizza from your kids!',W/2,246,'#ddd','#000',12,'center');
-    drawTextShadow('LEFT CLICK  = Steal CHEESE from Parker',W/2,266,'#4a7acc','#000',12,'center');
-    drawTextShadow('RIGHT CLICK = Steal SAUSAGE from Brennan',W/2,284,'#cc4a4a','#000',12,'center');
+    drawTextShadow('LEFT CLICK  = Steal CHEESE from Bro 2',W/2,266,'#4a7acc','#000',12,'center');
+    drawTextShadow('RIGHT CLICK = Steal SAUSAGE from Bro 1',W/2,284,'#cc4a4a','#000',12,'center');
     drawTextShadow('The kids will try to block you with AI!',W/2,304,'#ffaa44','#000',11,'center');
     drawTextShadow('Steal when they are distracted for best results!',W/2,320,'#aaa','#000',10,'center');
   }else{
     drawTextShadow('DAD (Player 1): Left click=cheese, Right click=sausage',W/2,246,'#ddd','#000',11,'center');
-    drawTextShadow('PARKER (Player 2): Hold any controller button to block',W/2,268,'#4a7acc','#000',11,'center');
-    drawTextShadow('BRENNAN (Player 3): Hold any keyboard key to block',W/2,290,'#cc4a4a','#000',11,'center');
+    drawTextShadow('BRO 2 (Player 2): Hold any controller button to block',W/2,268,'#4a7acc','#000',11,'center');
+    drawTextShadow('BRO 1 (Player 3): Hold any keyboard key to block',W/2,290,'#cc4a4a','#000',11,'center');
     drawTextShadow('Boys: Hold to block, but watch your stamina!',W/2,312,'#ffaa44','#000',11,'center');
   }
 
@@ -1495,8 +1495,8 @@ function renderGameOver(time){
   c.strokeStyle='#FFD700';c.lineWidth=2;c.strokeRect(120,145,400,130);
 
   drawTextShadow('Dad taxed: '+tm.total+'/'+TOTAL_SLICES+' slices',W/2,155,'#fff','#000',18,'center');
-  drawTextShadow('Parker lost: '+ch+' cheese slices',W/2,185,'#4a7acc','#000',16,'center');
-  drawTextShadow('Brennan lost: '+sa+' sausage slices',W/2,210,'#cc4a4a','#000',16,'center');
+  drawTextShadow('Bro 2 lost: '+ch+' cheese slices',W/2,185,'#4a7acc','#000',16,'center');
+  drawTextShadow('Bro 1 lost: '+sa+' sausage slices',W/2,210,'#cc4a4a','#000',16,'center');
   drawTextShadow('Rating:',W/2,245,'#aaa','#000',16,'center');
 
   drawTextShadow(GameEngine.getRatingLabel(),W/2,275,'#FFD700','#000',28,'center');
