@@ -877,8 +877,114 @@ function drawTextShadow(text,x,y,color,shadow,size,align){drawText(text,x+2,y+2,
 const TABLE_Y=180,TABLE_H=160,TABLE_X=80,TABLE_W=480,FLOOR_Y=TABLE_Y+TABLE_H;
 
 function renderBackground(){
+  // Wall
   fillTiles(c,TILES.wall,PALETTES.wall,0,0,W,TABLE_Y,2);
+  // Floor (checkered tile)
   fillTiles(c,TILES.floor,PALETTES.floor,0,FLOOR_Y,W,H-FLOOR_Y,2);
+
+  // === PIZZA PARLOR DETAILS ===
+
+  // Wainscoting / lower wall trim
+  c.fillStyle='#7a5030';c.fillRect(0,TABLE_Y-30,W,30);
+  c.fillStyle='#6a4020';c.fillRect(0,TABLE_Y-30,W,3);
+  c.fillStyle='#8a6040';c.fillRect(0,TABLE_Y-4,W,4);
+  // Wainscoting panels
+  for(let px=10;px<W;px+=60){
+    c.strokeStyle='#6a4020';c.lineWidth=1;
+    c.strokeRect(px,TABLE_Y-27,50,22);
+  }
+
+  // Arcade cabinet (left wall)
+  const ax=10,ay=20;
+  // Cabinet body
+  c.fillStyle='#1a1a3a';c.fillRect(ax,ay,50,TABLE_Y-50);
+  c.fillStyle='#2a2a5a';c.fillRect(ax+3,ay+3,44,TABLE_Y-56);
+  c.strokeStyle='#0a0a2a';c.lineWidth=2;c.strokeRect(ax,ay,50,TABLE_Y-50);
+  // Screen
+  c.fillStyle='#001100';c.fillRect(ax+8,ay+10,34,28);
+  // Screen glow
+  const sg=c.createRadialGradient(ax+25,ay+24,2,ax+25,ay+24,16);
+  sg.addColorStop(0,'#004400');sg.addColorStop(1,'#001100');
+  c.fillStyle=sg;c.fillRect(ax+8,ay+10,34,28);
+  // Pixel art on screen (tiny space invader)
+  c.fillStyle='#00ff44';
+  const invader=[[0,1,0,0,0,1,0],[0,0,1,1,1,0,0],[0,1,1,1,1,1,0],[1,0,1,1,1,0,1],[1,1,1,1,1,1,1],[0,1,0,0,0,1,0]];
+  for(let iy=0;iy<invader.length;iy++)for(let ix=0;ix<invader[iy].length;ix++){
+    if(invader[iy][ix])c.fillRect(ax+14+ix*3,ay+16+iy*3,3,3);
+  }
+  // Joystick area
+  c.fillStyle='#111';c.fillRect(ax+8,ay+42,34,18);
+  c.fillStyle='#cc0000';c.beginPath();c.arc(ax+25,ay+50,4,0,Math.PI*2);c.fill();
+  c.fillStyle='#333';c.fillRect(ax+14,ay+46,4,10);
+  // "INSERT COIN" text
+  c.fillStyle='#ffcc00';c.font='bold 5px monospace';c.textAlign='center';
+  c.fillText('INSERT',ax+25,ay+64);c.fillText('COIN',ax+25,ay+71);
+  // Cabinet marquee
+  c.fillStyle='#cc2222';c.fillRect(ax+3,ay+3,44,8);
+  c.fillStyle='#ffcc00';c.font='bold 6px monospace';c.textAlign='center';
+  c.fillText('GALACTIC',ax+25,ay+10);
+
+  // Neon "PIZZA" sign on wall (center-top)
+  const signX=240,signY=8;
+  // Sign backing
+  c.fillStyle='rgba(20,10,10,0.6)';c.fillRect(signX,signY,160,30);
+  c.strokeStyle='#660000';c.lineWidth=2;c.strokeRect(signX,signY,160,30);
+  // Neon glow
+  const neonFlicker=0.85+Math.sin(performance.now()*0.008)*0.15;
+  c.shadowColor='#ff3333';c.shadowBlur=10*neonFlicker;
+  c.fillStyle=`rgba(255,${Math.floor(60*neonFlicker)},${Math.floor(60*neonFlicker)},${neonFlicker})`;
+  c.font='bold 20px monospace';c.textAlign='center';
+  c.fillText('PIZZA',signX+80,signY+23);
+  c.shadowBlur=0;
+
+  // Checkered border strip under sign
+  for(let i=0;i<10;i++){
+    c.fillStyle=(i%2===0)?'#cc2222':'#22aa22';
+    c.fillRect(signX+i*16,signY+30,16,4);
+  }
+
+  // Framed picture (right wall) - Italian flag
+  const fx=570,fy=25;
+  c.fillStyle='#5a3818';c.fillRect(fx-2,fy-2,54,44);
+  c.fillStyle='#7a5828';c.fillRect(fx,fy,50,40);
+  c.fillStyle='#009246';c.fillRect(fx+3,fy+3,14,34);
+  c.fillStyle='#ffffff';c.fillRect(fx+17,fy+3,15,34);
+  c.fillStyle='#ce2b37';c.fillRect(fx+32,fy+3,15,34);
+
+  // Kitchen counter / order window (far right)
+  c.fillStyle='#555';c.fillRect(580,TABLE_Y-80,60,50);
+  c.fillStyle='#666';c.fillRect(583,TABLE_Y-77,54,44);
+  c.strokeStyle='#444';c.lineWidth=2;c.strokeRect(580,TABLE_Y-80,60,50);
+  // Heat lamp glow
+  c.fillStyle='#ff8800';c.beginPath();c.arc(610,TABLE_Y-78,3,0,Math.PI*2);c.fill();
+  c.fillStyle='rgba(255,136,0,0.1)';c.beginPath();c.moveTo(604,TABLE_Y-75);c.lineTo(616,TABLE_Y-75);c.lineTo(620,TABLE_Y-40);c.lineTo(600,TABLE_Y-40);c.closePath();c.fill();
+  // "ORDER HERE" sign
+  c.fillStyle='#ddd';c.fillRect(582,TABLE_Y-95,56,14);
+  c.fillStyle='#cc2222';c.font='bold 8px monospace';c.textAlign='center';
+  c.fillText('ORDER HERE',610,TABLE_Y-85);
+
+  // Menu board (on wall behind counter)
+  c.fillStyle='#2a2a2a';c.fillRect(580,fy,56,55);
+  c.strokeStyle='#5a3818';c.lineWidth=2;c.strokeRect(580,fy,56,55);
+  c.fillStyle='#eee';c.font='bold 6px monospace';c.textAlign='left';
+  c.fillText('CHEESE  $8',585,fy+12);
+  c.fillText('SAUSAGE $9',585,fy+22);
+  c.fillText('PEPPRNI $9',585,fy+32);
+  c.fillStyle='#ffcc00';
+  c.fillText('COMBO  $12',585,fy+44);
+
+  // Hanging pendant lamps
+  for(const lx of [200,440]){
+    c.strokeStyle='#333';c.lineWidth=2;c.beginPath();c.moveTo(lx,0);c.lineTo(lx,35);c.stroke();
+    // Lamp shade
+    c.fillStyle='#cc4422';c.beginPath();c.moveTo(lx-12,35);c.lineTo(lx+12,35);c.lineTo(lx+8,45);c.lineTo(lx-8,45);c.closePath();c.fill();
+    c.strokeStyle='#aa3311';c.lineWidth=1;c.stroke();
+    // Light glow
+    c.fillStyle='rgba(255,220,150,0.15)';c.beginPath();c.moveTo(lx-8,45);c.lineTo(lx+8,45);c.lineTo(lx+30,TABLE_Y-30);c.lineTo(lx-30,TABLE_Y-30);c.closePath();c.fill();
+  }
+
+  // Napkin dispenser on table edge (will be drawn with table)
+  // Salt and pepper shakers near center
 }
 
 function renderTable(){
@@ -887,6 +993,22 @@ function renderTable(){
   fillTiles(c,TILES.tablecloth,PALETTES.tablecloth,TABLE_X+8,TABLE_Y+8,TABLE_W-16,112,2);
   c.fillStyle='#5a3818';c.fillRect(TABLE_X,TABLE_Y+TABLE_H-12,TABLE_W,12);
   c.fillStyle='#3a2010';c.fillRect(TABLE_X,TABLE_Y+TABLE_H-4,TABLE_W,4);
+  // Table legs
+  c.fillStyle='#3a2010';
+  c.fillRect(TABLE_X+10,TABLE_Y+TABLE_H,8,H-TABLE_Y-TABLE_H);
+  c.fillRect(TABLE_X+TABLE_W-18,TABLE_Y+TABLE_H,8,H-TABLE_Y-TABLE_H);
+  // Napkin dispenser (center-right of table)
+  c.fillStyle='#c0c0c0';c.fillRect(368,TABLE_Y+8,16,20);
+  c.fillStyle='#ddd';c.fillRect(370,TABLE_Y+10,12,16);
+  c.fillStyle='#eee';c.fillRect(372,TABLE_Y+10,2,14);
+  c.strokeStyle='#999';c.lineWidth=1;c.strokeRect(368,TABLE_Y+8,16,20);
+  // Salt shaker
+  c.fillStyle='#e8e8e0';c.fillRect(268,TABLE_Y+14,8,14);c.fillStyle='#ccc';c.fillRect(268,TABLE_Y+12,8,4);
+  c.fillStyle='#333';for(let d=0;d<3;d++)c.fillRect(270+d*2,TABLE_Y+12,1,1);
+  // Pepper shaker
+  c.fillStyle='#2a2a2a';c.fillRect(280,TABLE_Y+14,8,14);c.fillStyle='#444';c.fillRect(280,TABLE_Y+12,8,4);
+  // Red pepper flake shaker
+  c.fillStyle='#cc3333';c.fillRect(256,TABLE_Y+16,7,12);c.fillStyle='#aa2222';c.fillRect(256,TABLE_Y+14,7,4);
 }
 
 // Canvas-drawn food (better looking than pixel sprites at this scale)
@@ -1025,37 +1147,194 @@ function drawStretchyArm(startX,startY,endX,endY,progress,blocked){
   }
 }
 
+// ---- CANVAS-DRAWN CHARACTERS ----
+function drawDadChar(cx,cy,state,bobPhase,time){
+  const bob=Math.sin(bobPhase)*2;
+  cy+=bob;
+  c.save();
+  // Legs
+  const legSpread=state==='blocked'?6:4;
+  c.fillStyle='#2a2a4a';
+  c.fillRect(cx-legSpread-5,cy+38,8,22);c.fillRect(cx+legSpread-3,cy+38,8,22);
+  // Shoes
+  c.fillStyle='#1a1a1a';
+  c.fillRect(cx-legSpread-7,cy+58,12,5);c.fillRect(cx+legSpread-4,cy+58,12,5);
+  // Body (green shirt)
+  c.fillStyle='#2d7a2d';
+  c.beginPath();c.moveTo(cx-16,cy+10);c.lineTo(cx-14,cy+40);c.lineTo(cx+14,cy+40);c.lineTo(cx+16,cy+10);c.closePath();c.fill();
+  c.strokeStyle='#1a4a1a';c.lineWidth=1.5;c.stroke();
+  // Shirt highlight
+  c.fillStyle='#4a9a4a';
+  c.beginPath();c.moveTo(cx-6,cy+12);c.lineTo(cx-4,cy+36);c.lineTo(cx+4,cy+36);c.lineTo(cx+6,cy+12);c.closePath();c.fill();
+  // Belt
+  c.fillStyle='#1a1a1a';c.fillRect(cx-14,cy+36,28,4);
+  c.fillStyle='#daa520';c.fillRect(cx-3,cy+36,6,4);
+  // Neck
+  c.fillStyle='#c68642';c.fillRect(cx-4,cy+2,8,10);
+  // Head
+  c.fillStyle='#c68642';c.beginPath();c.ellipse(cx,cy-10,14,16,0,0,Math.PI*2);c.fill();
+  c.strokeStyle='#6b4226';c.lineWidth=1;c.stroke();
+  // Hair (salt & pepper)
+  c.fillStyle='#6e5a3a';
+  c.beginPath();c.ellipse(cx,cy-22,13,8,0,Math.PI,Math.PI*2);c.fill();
+  c.fillStyle='#8a7a5a';
+  c.beginPath();c.ellipse(cx-5,cy-24,5,4,0.2,Math.PI,Math.PI*2);c.fill();
+  c.fillStyle='#555';
+  c.beginPath();c.ellipse(cx+5,cy-24,5,4,-0.2,Math.PI,Math.PI*2);c.fill();
+  // Eyes
+  const eyeY=cy-12;
+  if(state==='eating'){
+    // Happy squint
+    c.strokeStyle='#1a1a1a';c.lineWidth=2;
+    c.beginPath();c.arc(cx-6,eyeY,3,Math.PI*0.1,Math.PI*0.9);c.stroke();
+    c.beginPath();c.arc(cx+6,eyeY,3,Math.PI*0.1,Math.PI*0.9);c.stroke();
+  }else if(state==='blocked'){
+    // X eyes
+    c.strokeStyle='#ff4444';c.lineWidth=2;
+    c.beginPath();c.moveTo(cx-8,eyeY-3);c.lineTo(cx-4,eyeY+3);c.moveTo(cx-4,eyeY-3);c.lineTo(cx-8,eyeY+3);c.stroke();
+    c.beginPath();c.moveTo(cx+4,eyeY-3);c.lineTo(cx+8,eyeY+3);c.moveTo(cx+8,eyeY-3);c.lineTo(cx+4,eyeY+3);c.stroke();
+  }else{
+    // Normal eyes looking side to side
+    const lookX=state==='reaching'?2:Math.sin(time*0.002)*2;
+    c.fillStyle='#fff';c.beginPath();c.ellipse(cx-6,eyeY,4,4,0,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(cx+6,eyeY,4,4,0,0,Math.PI*2);c.fill();
+    c.fillStyle='#1a1a1a';c.beginPath();c.arc(cx-6+lookX,eyeY,2,0,Math.PI*2);c.fill();c.beginPath();c.arc(cx+6+lookX,eyeY,2,0,Math.PI*2);c.fill();
+  }
+  // Nose
+  c.fillStyle='#b07030';c.beginPath();c.ellipse(cx,cy-6,3,4,0,0,Math.PI*2);c.fill();
+  // Mouth/goatee
+  c.fillStyle='#4a3a2a';c.beginPath();c.ellipse(cx,cy+1,5,3,0,0,Math.PI*2);c.fill();
+  if(state==='eating'){
+    c.fillStyle='#cc4444';c.beginPath();c.arc(cx,cy,4,0,Math.PI);c.fill();
+  }else if(state==='blocked'){
+    c.strokeStyle='#1a1a1a';c.lineWidth=1.5;c.beginPath();c.arc(cx,cy+4,4,Math.PI,0);c.stroke();
+  }else{
+    c.strokeStyle='#1a1a1a';c.lineWidth=1;c.beginPath();c.moveTo(cx-3,cy+1);c.lineTo(cx+3,cy+1);c.stroke();
+  }
+  // Arms at sides (when not reaching)
+  if(state==='idle'||state==='cooldown'){
+    c.fillStyle='#2d7a2d';
+    c.fillRect(cx-20,cy+12,6,20);c.fillRect(cx+14,cy+12,6,20);
+    c.fillStyle='#c68642';
+    c.beginPath();c.ellipse(cx-17,cy+34,4,3,0,0,Math.PI*2);c.fill();
+    c.beginPath();c.ellipse(cx+17,cy+34,4,3,0,0,Math.PI*2);c.fill();
+  }
+  c.restore();
+}
+
+function drawBoyChar(cx,cy,name,state,bobPhase,indicator,time){
+  const bob=Math.sin(bobPhase)*2;
+  cy+=bob;
+  const isParker=name==='Parker';
+  const shirtDark=isParker?'#1a3a7a':'#7a1a1a';
+  const shirtBase=isParker?'#2a5aaa':'#aa2a2a';
+  const shirtLight=isParker?'#4a7acc':'#cc4a4a';
+  const hairDark=isParker?'#b89040':'#6e4a20';
+  const hairLight=isParker?'#d4aa50':'#8a6a30';
+  c.save();
+  // Legs
+  c.fillStyle='#2a2a4a';
+  c.fillRect(cx-5,cy+32,7,18);c.fillRect(cx-1,cy+32,7,18);
+  // Shoes
+  c.fillStyle='#1a1a1a';
+  c.fillRect(cx-6,cy+48,10,4);c.fillRect(cx-2,cy+48,10,4);
+  // Body (jersey)
+  c.fillStyle=shirtBase;
+  c.beginPath();c.moveTo(cx-13,cy+8);c.lineTo(cx-11,cy+34);c.lineTo(cx+11,cy+34);c.lineTo(cx+13,cy+8);c.closePath();c.fill();
+  c.strokeStyle=shirtDark;c.lineWidth=1;c.stroke();
+  // Jersey number
+  c.fillStyle='#fff';c.font='bold 10px monospace';c.textAlign='center';c.textBaseline='middle';
+  c.fillText(isParker?'7':'11',cx,cy+22);
+  // Shirt highlight stripe
+  c.fillStyle=shirtLight;c.fillRect(cx-12,cy+14,24,3);
+  // Neck
+  c.fillStyle='#c68642';c.fillRect(cx-3,cy+1,6,9);
+  // Head
+  c.fillStyle='#c68642';c.beginPath();c.ellipse(cx,cy-10,12,13,0,0,Math.PI*2);c.fill();
+  c.strokeStyle='#6b4226';c.lineWidth=1;c.stroke();
+  // Hair
+  c.fillStyle=hairDark;
+  c.beginPath();c.ellipse(cx,cy-20,11,7,0,Math.PI,Math.PI*2);c.fill();
+  c.fillStyle=hairLight;
+  c.beginPath();c.ellipse(cx,cy-22,9,5,0,Math.PI,Math.PI*2);c.fill();
+  // Side hair
+  c.fillStyle=hairDark;
+  c.fillRect(cx-12,cy-16,3,8);c.fillRect(cx+9,cy-16,3,8);
+  // Eyes
+  const eyeY=cy-11;
+  if(state==='blocking'){
+    // Determined squint
+    c.strokeStyle='#1a1a1a';c.lineWidth=2;
+    c.beginPath();c.moveTo(cx-9,eyeY-2);c.lineTo(cx-3,eyeY+1);c.stroke();
+    c.beginPath();c.moveTo(cx+3,eyeY+1);c.lineTo(cx+9,eyeY-2);c.stroke();
+  }else if(state==='distracted'){
+    // Looking away dreamily
+    c.fillStyle='#fff';c.beginPath();c.ellipse(cx-5,eyeY,3.5,3.5,0,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(cx+5,eyeY,3.5,3.5,0,0,Math.PI*2);c.fill();
+    c.fillStyle='#1a1a1a';c.beginPath();c.arc(cx-5+(isParker?-2:2),eyeY-1,1.5,0,Math.PI*2);c.fill();c.beginPath();c.arc(cx+5+(isParker?-2:2),eyeY-1,1.5,0,Math.PI*2);c.fill();
+  }else if(state==='eating'){
+    // Happy
+    c.strokeStyle='#1a1a1a';c.lineWidth=1.5;
+    c.beginPath();c.arc(cx-5,eyeY,3,Math.PI*0.1,Math.PI*0.9);c.stroke();
+    c.beginPath();c.arc(cx+5,eyeY,3,Math.PI*0.1,Math.PI*0.9);c.stroke();
+  }else{
+    // Normal
+    const lookX=Math.sin(time*0.003+cx)*1.5;
+    c.fillStyle='#fff';c.beginPath();c.ellipse(cx-5,eyeY,3.5,3.5,0,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(cx+5,eyeY,3.5,3.5,0,0,Math.PI*2);c.fill();
+    c.fillStyle='#1a1a1a';c.beginPath();c.arc(cx-5+lookX,eyeY,1.8,0,Math.PI*2);c.fill();c.beginPath();c.arc(cx+5+lookX,eyeY,1.8,0,Math.PI*2);c.fill();
+  }
+  // Nose
+  c.fillStyle='#b07030';c.beginPath();c.ellipse(cx,cy-5,2,3,0,0,Math.PI*2);c.fill();
+  // Mouth
+  if(state==='eating'){
+    c.fillStyle='#cc4444';c.beginPath();c.arc(cx,cy-1,3,0,Math.PI);c.fill();
+  }else if(state==='blocking'){
+    c.strokeStyle='#1a1a1a';c.lineWidth=1.5;c.beginPath();c.moveTo(cx-4,cy);c.lineTo(cx+4,cy);c.stroke();
+  }else{
+    c.strokeStyle='#1a1a1a';c.lineWidth=1;c.beginPath();c.arc(cx,cy-1,3,0.2,Math.PI-0.2);c.stroke();
+  }
+  // Arms
+  if(state==='blocking'){
+    // Arms crossed / up in front
+    c.fillStyle=shirtBase;
+    c.save();c.translate(cx-14,cy+10);c.rotate(-0.8);c.fillRect(0,0,6,22);c.restore();
+    c.save();c.translate(cx+8,cy+10);c.rotate(0.8);c.fillRect(0,0,6,22);c.restore();
+    c.fillStyle='#c68642';
+    c.beginPath();c.ellipse(cx-22,cy+2,4,3,0,0,Math.PI*2);c.fill();
+    c.beginPath();c.ellipse(cx+22,cy+2,4,3,0,0,Math.PI*2);c.fill();
+  }else{
+    // Arms at sides
+    c.fillStyle=shirtBase;
+    c.fillRect(cx-17,cy+10,5,18);c.fillRect(cx+12,cy+10,5,18);
+    c.fillStyle='#c68642';
+    c.beginPath();c.ellipse(cx-15,cy+30,3,3,0,0,Math.PI*2);c.fill();
+    c.beginPath();c.ellipse(cx+15,cy+30,3,3,0,0,Math.PI*2);c.fill();
+  }
+  c.restore();
+  // Indicator
+  if(indicator)drawTextShadow(indicator,cx,cy-30,indicator==='!'?'#FF4444':'#FFAA00','#000',20,'center');
+}
+
 function renderCharacters(time){
   const dad=GameEngine.getDad(),boys=GameEngine.getBoys();
   // Dad (top center)
-  const dadX=288,dadY=TABLE_Y-84+Math.sin(dad.bobPhase)*2;
-  let dadFrames,dadFlip=false;
-  if(dad.state==='eating')dadFrames=SPRITES.dad.eating;
-  else if(dad.state==='reaching'){dadFrames=SPRITES.dad.reachRight;if(dad.target==='left')dadFlip=true;}
-  else if(dad.state==='blocked')dadFrames=SPRITES.dad.blocked;
-  else dadFrames=SPRITES.dad.idle;
-  const df=getAnimFrame(dadFrames,time,dad.state==='eating'?6:4);
-  if(df)renderSprite(c,df,PALETTES.dad,dadX,dadY,SS,dadFlip);
+  const dadCX=320,dadCY=TABLE_Y-40+Math.sin(dad.bobPhase)*2;
+  drawDadChar(dadCX,dadCY,dad.state,dad.bobPhase,time);
 
   if(dad.state==='reaching'||dad.state==='eating'||dad.state==='blocked'){
-    const shoulderX=dadX+32;const shoulderY=dadY+52;
-    const targetX=dad.target==='left'?144:444;const targetY=TABLE_Y+32;
+    const shoulderX=dadCX+(dad.target==='left'?-10:10);
+    const shoulderY=dadCY+20;
+    const targetX=dad.target==='left'?144:454;const targetY=TABLE_Y+32;
     drawStretchyArm(shoulderX,shoulderY,targetX,targetY,dad.reachProgress||0,dad.state==='blocked');
   }
 
   // Parker (left-bottom)
-  const pk=boys[0],pkX=100,pkY=FLOOR_Y-12+Math.sin(pk.bobPhase)*2;
+  const pk=boys[0],pkCX=132,pkCY=FLOOR_Y+6+Math.sin(pk.bobPhase)*2;
   let pkState=pk.state==='eating_own'?'eating':pk.state;
-  const pkF=getAnimFrame(SPRITES.parker[pkState]||SPRITES.parker.idle,time,4);
-  if(pkF)renderSprite(c,pkF,PALETTES.parker,pkX,pkY,SS);
-  if(pk.indicator)drawTextShadow(pk.indicator,pkX+32,pkY-18,pk.indicator==='!'?'#FF4444':'#FFAA00','#000',18,'center');
+  drawBoyChar(pkCX,pkCY,'Parker',pkState,pk.bobPhase,pk.indicator,time);
 
   // Brennan (right-bottom)
-  const br=boys[1],brX=460,brY=FLOOR_Y-16+Math.sin(br.bobPhase)*2;
+  const br=boys[1],brCX=492,brCY=FLOOR_Y+4+Math.sin(br.bobPhase)*2;
   let brState=br.state==='eating_own'?'eating':br.state;
-  const brF=getAnimFrame(SPRITES.brennan[brState]||SPRITES.brennan.idle,time,4);
-  if(brF)renderSprite(c,brF,PALETTES.brennan,brX,brY,SS);
-  if(br.indicator)drawTextShadow(br.indicator,brX+32,brY-18,br.indicator==='!'?'#FF4444':'#FFAA00','#000',18,'center');
+  drawBoyChar(brCX,brCY,'Brennan',brState,br.bobPhase,br.indicator,time);
 }
 
 function renderEffects(){
