@@ -836,9 +836,8 @@ canvas.addEventListener('mousedown',e=>{
     return;
   }
   if(state==="PLAYING"){
-    // Click left half = cheese, right half = sausage
-    if(pos.x<W/2)mouseAction.left=true;
-    else mouseAction.right=true;
+    if(e.button===0)mouseAction.left=true;
+    if(e.button===2)mouseAction.right=true;
   }
   if(state==="MENU"||state==="GAME_OVER"){
     if(hitTest(pos,BTN_START)){mouseAction.left=true;}
@@ -856,7 +855,7 @@ canvas.addEventListener('touchstart',e=>{
       else if(hitTest(pos,BTN_3P)){GameEngine.setMode("3P");GameEngine.setState("MENU");}
     }else if(state==="PLAYING"){
       if(pos.x<W/2)mouseAction.left=true;
-      else mouseAction.right=true;
+      else mouseAction.right=true;  // touch: left half=cheese, right half=sausage
     }else{
       if(hitTest(pos,BTN_START)){mouseAction.left=true;}
     }
@@ -868,7 +867,7 @@ let hoverBtn=null;
 canvas.addEventListener('mousemove',e=>{
   const pos=getLogicalPos(e.clientX,e.clientY);const state=GameEngine.getState();
   if(state==="MODE_SELECT"){hoverBtn=hitTest(pos,BTN_1P)?'1p':hitTest(pos,BTN_3P)?'3p':null;}
-  else if(state==="PLAYING"){hoverBtn=pos.x<W/2?'left':'right';}
+  else if(state==="PLAYING"){hoverBtn=null;}
   else{hoverBtn=hitTest(pos,BTN_START)?'start':null;}
 });
 
@@ -1092,12 +1091,13 @@ function renderHUD(time){
   for(let i=0;i<taxMeter.total;i++){const sy=mY+mH-16-i*16;c.fillStyle=taxMeter.slices[i]==='cheese'?'#f0c040':'#6a3a1a';c.beginPath();c.moveTo(mX+12,sy);c.lineTo(mX+4,sy+12);c.lineTo(mX+20,sy+12);c.closePath();c.fill();}
 
   // Buttons
-  // Left/right zone indicators
-  c.fillStyle=hoverBtn==='left'?'rgba(34,68,136,0.7)':'rgba(34,68,136,0.4)';c.fillRect(0,BTN_LEFT.y,W/2,40);
-  c.strokeStyle='#6688cc';c.lineWidth=2;c.beginPath();c.moveTo(W/2,BTN_LEFT.y);c.lineTo(W/2,BTN_LEFT.y+40);c.stroke();
-  drawTextShadow('< CLICK HERE: CHEESE',W/4,BTN_LEFT.y+10,'#fff','#000',16,'center');
-  c.fillStyle=hoverBtn==='right'?'rgba(136,34,34,0.7)':'rgba(136,34,34,0.4)';c.fillRect(W/2,BTN_RIGHT.y,W/2,40);
-  drawTextShadow('CLICK HERE: SAUSAGE >',W*3/4,BTN_RIGHT.y+10,'#fff','#000',16,'center');
+  // Control hints at bottom
+  c.fillStyle='rgba(34,68,136,0.5)';c.fillRect(BTN_LEFT.x,BTN_LEFT.y,BTN_LEFT.w,BTN_LEFT.h);
+  c.strokeStyle='#6688cc';c.lineWidth=2;c.strokeRect(BTN_LEFT.x,BTN_LEFT.y,BTN_LEFT.w,BTN_LEFT.h);
+  drawTextShadow('LEFT CLICK: CHEESE',BTN_LEFT.x+BTN_LEFT.w/2,BTN_LEFT.y+10,'#fff','#000',14,'center');
+  c.fillStyle='rgba(136,34,34,0.5)';c.fillRect(BTN_RIGHT.x,BTN_RIGHT.y,BTN_RIGHT.w,BTN_RIGHT.h);
+  c.strokeStyle='#cc6666';c.lineWidth=2;c.strokeRect(BTN_RIGHT.x,BTN_RIGHT.y,BTN_RIGHT.w,BTN_RIGHT.h);
+  drawTextShadow('RIGHT CLICK: SAUSAGE',BTN_RIGHT.x+BTN_RIGHT.w/2,BTN_RIGHT.y+10,'#fff','#000',14,'center');
   drawTextShadow(taxMeter.total+'/'+TOTAL_SLICES+' TAXED',W/2,414,'#FFD700','#000',16,'center');
 
   drawTextShadow('PARKER',132,FLOOR_Y-30,'#4a7acc','#000',13,'center');
@@ -1182,12 +1182,12 @@ function renderTitle(time){
 
   if(mode==='1P'){
     drawTextShadow('You are DAD - steal pizza from your kids!',W/2,246,'#ddd','#000',12,'center');
-    drawTextShadow('Click LEFT button or touch left  = Steal CHEESE from Parker',W/2,266,'#4a7acc','#000',11,'center');
-    drawTextShadow('Click RIGHT button or touch right = Steal SAUSAGE from Brennan',W/2,284,'#cc4a4a','#000',11,'center');
+    drawTextShadow('LEFT CLICK  = Steal CHEESE from Parker',W/2,266,'#4a7acc','#000',12,'center');
+    drawTextShadow('RIGHT CLICK = Steal SAUSAGE from Brennan',W/2,284,'#cc4a4a','#000',12,'center');
     drawTextShadow('The kids will try to block you with AI!',W/2,304,'#ffaa44','#000',11,'center');
     drawTextShadow('Steal when they are distracted for best results!',W/2,320,'#aaa','#000',10,'center');
   }else{
-    drawTextShadow('DAD (Player 1): Click left/right buttons to steal pizza',W/2,246,'#ddd','#000',11,'center');
+    drawTextShadow('DAD (Player 1): Left click=cheese, Right click=sausage',W/2,246,'#ddd','#000',11,'center');
     drawTextShadow('PARKER (Player 2): Hold any controller button to block',W/2,268,'#4a7acc','#000',11,'center');
     drawTextShadow('BRENNAN (Player 3): Hold any keyboard key to block',W/2,290,'#cc4a4a','#000',11,'center');
     drawTextShadow('Boys: Hold to block, but watch your stamina!',W/2,312,'#ffaa44','#000',11,'center');
