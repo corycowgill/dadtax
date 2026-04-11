@@ -700,6 +700,7 @@ const GameEngine=(function(){
     }
     if(gameState==="MENU"||gameState==="GAME_OVER"){
       if((mouse&&(mouse.left||mouse.right))){
+        mouse.left=false;mouse.right=false;
         startGame();
       }
     }
@@ -835,11 +836,12 @@ canvas.addEventListener('mousedown',e=>{
     return;
   }
   if(state==="PLAYING"){
-    if(hitTest(pos,BTN_LEFT))mouseAction.left=true;
-    else if(hitTest(pos,BTN_RIGHT))mouseAction.right=true;
+    // Click left half = cheese, right half = sausage
+    if(pos.x<W/2)mouseAction.left=true;
+    else mouseAction.right=true;
   }
   if(state==="MENU"||state==="GAME_OVER"){
-    if(hitTest(pos,BTN_START))mouseAction.left=true;
+    if(hitTest(pos,BTN_START)){mouseAction.left=true;}
   }
 });
 canvas.addEventListener('mouseup',e=>{mouseAction.left=false;mouseAction.right=false;});
@@ -853,10 +855,10 @@ canvas.addEventListener('touchstart',e=>{
       if(hitTest(pos,BTN_1P)){GameEngine.setMode("1P");GameEngine.setState("MENU");}
       else if(hitTest(pos,BTN_3P)){GameEngine.setMode("3P");GameEngine.setState("MENU");}
     }else if(state==="PLAYING"){
-      if(hitTest(pos,BTN_LEFT))mouseAction.left=true;
-      else if(hitTest(pos,BTN_RIGHT))mouseAction.right=true;
+      if(pos.x<W/2)mouseAction.left=true;
+      else mouseAction.right=true;
     }else{
-      if(hitTest(pos,BTN_START))mouseAction.left=true;
+      if(hitTest(pos,BTN_START)){mouseAction.left=true;}
     }
   }
 },{passive:false});
@@ -866,7 +868,7 @@ let hoverBtn=null;
 canvas.addEventListener('mousemove',e=>{
   const pos=getLogicalPos(e.clientX,e.clientY);const state=GameEngine.getState();
   if(state==="MODE_SELECT"){hoverBtn=hitTest(pos,BTN_1P)?'1p':hitTest(pos,BTN_3P)?'3p':null;}
-  else if(state==="PLAYING"){hoverBtn=hitTest(pos,BTN_LEFT)?'left':hitTest(pos,BTN_RIGHT)?'right':null;}
+  else if(state==="PLAYING"){hoverBtn=pos.x<W/2?'left':'right';}
   else{hoverBtn=hitTest(pos,BTN_START)?'start':null;}
 });
 
@@ -888,22 +890,102 @@ function renderTable(){
   c.fillStyle='#3a2010';c.fillRect(TABLE_X,TABLE_Y+TABLE_H-4,TABLE_W,4);
 }
 
+// Canvas-drawn food (better looking than pixel sprites at this scale)
+function drawPlate(cx,cy,r){
+  c.fillStyle='#e8e8e0';c.beginPath();c.ellipse(cx,cy,r,r*0.7,0,0,Math.PI*2);c.fill();
+  c.strokeStyle='#c0c0b0';c.lineWidth=2;c.stroke();
+  c.fillStyle='#f4f4ec';c.beginPath();c.ellipse(cx,cy-1,r-4,r*0.7-3,0,0,Math.PI*2);c.fill();
+}
+
+function drawPizzaWhole(cx,cy,r,type){
+  // Crust ring
+  c.fillStyle='#c8942a';c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.fill();
+  c.strokeStyle='#8a5a20';c.lineWidth=2;c.stroke();
+  // Sauce
+  c.fillStyle='#cc4420';c.beginPath();c.arc(cx,cy,r-4,0,Math.PI*2);c.fill();
+  // Cheese
+  c.fillStyle='#f0c040';c.beginPath();c.arc(cx,cy,r-6,0,Math.PI*2);c.fill();
+  // Cheese highlights
+  c.fillStyle='#ffe060';
+  for(let i=0;i<5;i++){const a=i*1.25;const d=r*0.4;c.beginPath();c.arc(cx+Math.cos(a)*d,cy+Math.sin(a)*d,3,0,Math.PI*2);c.fill();}
+  // Toppings
+  if(type==='sausage'){
+    const spots=[[0,-6],[-8,4],[7,3],[-3,-10],[5,-5],[-6,-3],[2,7]];
+    for(const[sx,sy] of spots){
+      c.fillStyle='#6a3a1a';c.beginPath();c.arc(cx+sx,cy+sy,3,0,Math.PI*2);c.fill();
+      c.fillStyle='#8a5a2a';c.beginPath();c.arc(cx+sx,cy+sy-0.5,2,0,Math.PI*2);c.fill();
+    }
+  }
+  // Slice lines
+  c.strokeStyle='rgba(180,120,40,0.4)';c.lineWidth=1;
+  for(let i=0;i<4;i++){const a=i*Math.PI/4;c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);c.stroke();}
+}
+
+function drawPizzaSlice(cx,cy,angle,type){
+  c.save();c.translate(cx,cy);c.rotate(angle);
+  // Slice triangle
+  c.fillStyle='#c8942a';c.beginPath();c.moveTo(0,-2);c.lineTo(-8,16);c.lineTo(8,16);c.closePath();c.fill();
+  c.fillStyle='#f0c040';c.beginPath();c.moveTo(0,0);c.lineTo(-6,14);c.lineTo(6,14);c.closePath();c.fill();
+  // Crust arc
+  c.fillStyle='#c8942a';c.beginPath();c.ellipse(0,16,9,4,0,0,Math.PI);c.fill();
+  c.strokeStyle='#8a5a20';c.lineWidth=1;c.beginPath();c.ellipse(0,16,9,4,0,0,Math.PI);c.stroke();
+  if(type==='sausage'){c.fillStyle='#6a3a1a';c.beginPath();c.arc(0,7,2.5,0,Math.PI*2);c.fill();}
+  c.restore();
+}
+
+function drawCaesarSalad(cx,cy){
+  // Bowl
+  c.fillStyle='#8a6a30';c.beginPath();c.ellipse(cx,cy+6,22,14,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#aa8040';c.beginPath();c.ellipse(cx,cy+4,20,12,0,0,Math.PI*2);c.fill();
+  c.strokeStyle='#6a4a20';c.lineWidth=1.5;c.beginPath();c.ellipse(cx,cy+6,22,14,0,0,Math.PI);c.stroke();
+  // Lettuce pile
+  const greens=['#5a9a3a','#4a8a2a','#6aaa4a','#3a7a1a','#7aba5a'];
+  for(let i=0;i<8;i++){
+    const a=i*0.8+0.3;const d=8+Math.sin(i*2.1)*4;
+    const lx=cx+Math.cos(a)*d*0.6;const ly=cy-2+Math.sin(a)*d*0.3-i*0.8;
+    c.fillStyle=greens[i%greens.length];
+    c.beginPath();c.ellipse(lx,ly,7+Math.sin(i)*2,4,a*0.3,0,Math.PI*2);c.fill();
+  }
+  // Romaine leaves sticking up
+  c.fillStyle='#5aaa3a';
+  c.beginPath();c.ellipse(cx-6,cy-10,3,7,0.3,0,Math.PI*2);c.fill();
+  c.fillStyle='#4a9a2a';
+  c.beginPath();c.ellipse(cx+5,cy-12,3,8,-0.2,0,Math.PI*2);c.fill();
+  c.fillStyle='#6aba4a';
+  c.beginPath();c.ellipse(cx,cy-9,4,6,0,0,Math.PI*2);c.fill();
+  // Croutons
+  c.fillStyle='#c8a040';
+  c.fillRect(cx-8,cy-4,5,4);c.fillRect(cx+4,cy-6,5,4);c.fillRect(cx-2,cy-2,4,4);
+  c.fillStyle='#dab050';
+  c.fillRect(cx-7,cy-3,3,2);c.fillRect(cx+5,cy-5,3,2);
+  // Parmesan shavings
+  c.fillStyle='rgba(255,255,220,0.7)';
+  c.fillRect(cx-5,cy-8,2,1);c.fillRect(cx+3,cy-10,3,1);c.fillRect(cx-1,cy-6,2,1);
+  // Caesar dressing drizzle
+  c.strokeStyle='rgba(240,230,180,0.5)';c.lineWidth=1;
+  c.beginPath();c.moveTo(cx-10,cy-5);c.quadraticCurveTo(cx,cy-8,cx+10,cy-4);c.stroke();
+  // Sad face on a crouton
+  c.fillStyle='#222';
+  c.fillRect(cx-4,cy-1,1,1);c.fillRect(cx,cy-1,1,1);
+  c.beginPath();c.arc(cx-2,cy+2,2,Math.PI,0);c.stroke();
+}
+
 function renderTableItems(){
   const boys=GameEngine.getBoys();
   // Parker plate + cheese pizza (left)
-  renderSprite(c,ITEM_SPRITES.plate,PALETTES.pizza,120,TABLE_Y+20,SS);
+  drawPlate(144,TABLE_Y+42,24);
   if(boys[0].slices>0){
-    if(boys[0].slices>=3)renderSprite(c,ITEM_SPRITES.cheesePizzaWhole,PALETTES.pizza,120,TABLE_Y+16,SS);
-    else for(let i=0;i<boys[0].slices;i++)renderSprite(c,ITEM_SPRITES.cheesePizzaSlice,PALETTES.pizza,124+i*20,TABLE_Y+24,SS);
+    if(boys[0].slices>=3)drawPizzaWhole(144,TABLE_Y+40,18,'cheese');
+    else for(let i=0;i<boys[0].slices;i++)drawPizzaSlice(130+i*14,TABLE_Y+34,i*0.4-0.2,'cheese');
   }
   // Brennan plate + sausage pizza (right)
-  renderSprite(c,ITEM_SPRITES.plate,PALETTES.pizza,420,TABLE_Y+20,SS);
+  drawPlate(454,TABLE_Y+42,24);
   if(boys[1].slices>0){
-    if(boys[1].slices>=3)renderSprite(c,ITEM_SPRITES.sausagePizzaWhole,PALETTES.pizza,420,TABLE_Y+16,SS);
-    else for(let i=0;i<boys[1].slices;i++)renderSprite(c,ITEM_SPRITES.sausagePizzaSlice,PALETTES.pizza,424+i*20,TABLE_Y+24,SS);
+    if(boys[1].slices>=3)drawPizzaWhole(454,TABLE_Y+40,18,'sausage');
+    else for(let i=0;i<boys[1].slices;i++)drawPizzaSlice(440+i*14,TABLE_Y+34,i*0.4-0.2,'sausage');
   }
-  // Dad's sad salad (center)
-  renderSprite(c,ITEM_SPRITES.sadSalad,PALETTES.salad,300,TABLE_Y+12,SS);
+  // Dad's caesar salad (center)
+  drawCaesarSalad(320,TABLE_Y+36);
 }
 
 function drawStretchyArm(startX,startY,endX,endY,progress,blocked){
@@ -1010,12 +1092,12 @@ function renderHUD(time){
   for(let i=0;i<taxMeter.total;i++){const sy=mY+mH-16-i*16;c.fillStyle=taxMeter.slices[i]==='cheese'?'#f0c040':'#6a3a1a';c.beginPath();c.moveTo(mX+12,sy);c.lineTo(mX+4,sy+12);c.lineTo(mX+20,sy+12);c.closePath();c.fill();}
 
   // Buttons
-  c.fillStyle=hoverBtn==='left'?'#3366cc':'#224488';c.fillRect(BTN_LEFT.x,BTN_LEFT.y,BTN_LEFT.w,BTN_LEFT.h);
-  c.strokeStyle='#6688cc';c.lineWidth=2;c.strokeRect(BTN_LEFT.x,BTN_LEFT.y,BTN_LEFT.w,BTN_LEFT.h);
-  drawTextShadow('< CHEESE (Click)',BTN_LEFT.x+BTN_LEFT.w/2,BTN_LEFT.y+10,'#fff','#000',16,'center');
-  c.fillStyle=hoverBtn==='right'?'#cc3333':'#882222';c.fillRect(BTN_RIGHT.x,BTN_RIGHT.y,BTN_RIGHT.w,BTN_RIGHT.h);
-  c.strokeStyle='#cc6666';c.lineWidth=2;c.strokeRect(BTN_RIGHT.x,BTN_RIGHT.y,BTN_RIGHT.w,BTN_RIGHT.h);
-  drawTextShadow('SAUSAGE (Click) >',BTN_RIGHT.x+BTN_RIGHT.w/2,BTN_RIGHT.y+10,'#fff','#000',16,'center');
+  // Left/right zone indicators
+  c.fillStyle=hoverBtn==='left'?'rgba(34,68,136,0.7)':'rgba(34,68,136,0.4)';c.fillRect(0,BTN_LEFT.y,W/2,40);
+  c.strokeStyle='#6688cc';c.lineWidth=2;c.beginPath();c.moveTo(W/2,BTN_LEFT.y);c.lineTo(W/2,BTN_LEFT.y+40);c.stroke();
+  drawTextShadow('< CLICK HERE: CHEESE',W/4,BTN_LEFT.y+10,'#fff','#000',16,'center');
+  c.fillStyle=hoverBtn==='right'?'rgba(136,34,34,0.7)':'rgba(136,34,34,0.4)';c.fillRect(W/2,BTN_RIGHT.y,W/2,40);
+  drawTextShadow('CLICK HERE: SAUSAGE >',W*3/4,BTN_RIGHT.y+10,'#fff','#000',16,'center');
   drawTextShadow(taxMeter.total+'/'+TOTAL_SLICES+' TAXED',W/2,414,'#FFD700','#000',16,'center');
 
   drawTextShadow('PARKER',132,FLOOR_Y-30,'#4a7acc','#000',13,'center');
@@ -1050,9 +1132,9 @@ function renderModeSelect(time){
   drawTextShadow('ATTACK!',W/2,100,'#FF6600','#4a1a00',42,'center');
 
   // Pizza decorations
-  renderSprite(c,ITEM_SPRITES.cheesePizzaWhole,PALETTES.pizza,80,160,SS);
-  renderSprite(c,ITEM_SPRITES.sausagePizzaWhole,PALETTES.pizza,500,160,SS);
-  renderSprite(c,ITEM_SPRITES.sadSalad,PALETTES.salad,290,170,SS);
+  drawPlate(110,185,26);drawPizzaWhole(110,183,20,'cheese');
+  drawPlate(530,185,26);drawPizzaWhole(530,183,20,'sausage');
+  drawCaesarSalad(320,180);
 
   drawTextShadow('Choose your mode:',W/2,225,'#ddd','#000',18,'center');
 
@@ -1088,9 +1170,9 @@ function renderTitle(time){
   drawTextShadow(mode==='1P'?'1 PLAYER MODE':'3 PLAYER LOCAL MULTIPLAYER',W/2,152,'#44ffaa','#003322',14,'center');
 
   // Pizza decorations
-  renderSprite(c,ITEM_SPRITES.cheesePizzaWhole,PALETTES.pizza,100,178,SS);
-  renderSprite(c,ITEM_SPRITES.sausagePizzaWhole,PALETTES.pizza,492,178,SS);
-  renderSprite(c,ITEM_SPRITES.sadSalad,PALETTES.salad,290,186,SS);
+  drawPlate(130,203,26);drawPizzaWhole(130,201,20,'cheese');
+  drawPlate(522,203,26);drawPizzaWhole(522,201,20,'sausage');
+  drawCaesarSalad(320,198);
 
   // Instructions box
   c.fillStyle='rgba(0,0,0,0.5)';
