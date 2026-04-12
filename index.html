@@ -1102,6 +1102,197 @@ function renderBackground(){
   c.fillStyle='#aa5a2a';c.fillRect(potX-12,potY-8,24,3);
   c.strokeStyle='#5a1a0a';c.lineWidth=1;c.beginPath();c.moveTo(potX-12,potY-8);c.lineTo(potX+12,potY-8);c.lineTo(potX+10,potY+8);c.lineTo(potX-10,potY+8);c.closePath();c.stroke();
 
+  // === ADDITIONAL SCENERY ===
+  const nowT=performance.now();
+
+  // Wood ceiling beam along the top
+  const beamGrad=c.createLinearGradient(0,0,0,10);
+  beamGrad.addColorStop(0,'#3a2010');
+  beamGrad.addColorStop(0.5,'#5a3418');
+  beamGrad.addColorStop(1,'#2a1808');
+  c.fillStyle=beamGrad;c.fillRect(0,0,W,10);
+  c.fillStyle='#6a3e1c';c.fillRect(0,2,W,1);
+  c.fillStyle='#1a0804';c.fillRect(0,9,W,1);
+  // Wood grain knots/lines
+  for(let kx=20;kx<W;kx+=70){
+    c.fillStyle='rgba(20,10,5,0.4)';
+    c.fillRect(kx,3,30,1);c.fillRect(kx+10,6,18,1);
+  }
+  // Bolts on beam
+  c.fillStyle='#888';
+  for(let bx=30;bx<W;bx+=90){c.beginPath();c.arc(bx,5,1.5,0,Math.PI*2);c.fill();}
+
+  // String bulb garland (catenary curve across top)
+  c.strokeStyle='#222';c.lineWidth=1;
+  c.beginPath();
+  for(let gx=0;gx<=W;gx+=4){
+    const sag=Math.sin(gx/W*Math.PI)*10;
+    const gy=12+sag;
+    if(gx===0)c.moveTo(gx,gy);else c.lineTo(gx,gy);
+  }
+  c.stroke();
+  // Colored bulbs along the string
+  const bulbColors=['#ff4444','#44ff88','#4488ff','#ffcc44','#ff88cc','#88ffff','#ffaa44'];
+  for(let bi=0;bi<14;bi++){
+    const gx=20+bi*44;
+    if(gx>W-20)break;
+    // Skip bulbs that would overlap the neon PIZZA sign area
+    if(gx>232&&gx<408)continue;
+    const sag=Math.sin(gx/W*Math.PI)*10;
+    const gy=12+sag+3;
+    const col=bulbColors[bi%bulbColors.length];
+    const twink=0.6+Math.sin(nowT*0.003+bi*0.8)*0.4;
+    // Socket
+    c.fillStyle='#444';c.fillRect(gx-1,gy-3,2,3);
+    // Bulb glow
+    c.save();c.shadowColor=col;c.shadowBlur=6*twink;
+    c.fillStyle=col;
+    c.beginPath();c.ellipse(gx,gy+1,2.5,3.2,0,0,Math.PI*2);c.fill();
+    c.restore();
+    // Bulb highlight
+    c.fillStyle=`rgba(255,255,255,${twink*0.7})`;
+    c.beginPath();c.arc(gx-0.8,gy,0.6,0,Math.PI*2);c.fill();
+  }
+
+  // Pizza-shaped wall clock (right of neon sign, above counter)
+  const clkX=500,clkY=70,clkR=22;
+  // Shadow
+  c.fillStyle='rgba(0,0,0,0.4)';c.beginPath();c.arc(clkX+2,clkY+3,clkR+1,0,Math.PI*2);c.fill();
+  // Crust
+  const clkCrust=c.createRadialGradient(clkX-5,clkY-5,5,clkX,clkY,clkR);
+  clkCrust.addColorStop(0,'#e0a840');
+  clkCrust.addColorStop(1,'#8a5a20');
+  c.fillStyle=clkCrust;c.beginPath();c.arc(clkX,clkY,clkR,0,Math.PI*2);c.fill();
+  c.strokeStyle='#4a2810';c.lineWidth=2;c.stroke();
+  // Sauce
+  c.fillStyle='#b83818';c.beginPath();c.arc(clkX,clkY,clkR-3,0,Math.PI*2);c.fill();
+  // Cheese face
+  c.fillStyle='#f0c040';c.beginPath();c.arc(clkX,clkY,clkR-4,0,Math.PI*2);c.fill();
+  c.fillStyle='#ffe060';c.beginPath();c.arc(clkX-5,clkY-5,4,0,Math.PI*2);c.fill();
+  // Pepperoni numbers (12, 3, 6, 9)
+  c.fillStyle='#8a1a0a';
+  c.beginPath();c.arc(clkX,clkY-14,2.5,0,Math.PI*2);c.fill();
+  c.beginPath();c.arc(clkX+14,clkY,2.5,0,Math.PI*2);c.fill();
+  c.beginPath();c.arc(clkX,clkY+14,2.5,0,Math.PI*2);c.fill();
+  c.beginPath();c.arc(clkX-14,clkY,2.5,0,Math.PI*2);c.fill();
+  c.fillStyle='#aa2a1a';
+  c.beginPath();c.arc(clkX-0.5,clkY-14.5,1.2,0,Math.PI*2);c.fill();
+  c.beginPath();c.arc(clkX+13.5,clkY-0.5,1.2,0,Math.PI*2);c.fill();
+  c.beginPath();c.arc(clkX-0.5,clkY+13.5,1.2,0,Math.PI*2);c.fill();
+  c.beginPath();c.arc(clkX-14.5,clkY-0.5,1.2,0,Math.PI*2);c.fill();
+  // Hour/minute/second hands (real time)
+  const d=new Date();
+  const secA=(d.getSeconds()+d.getMilliseconds()/1000)/60*Math.PI*2-Math.PI/2;
+  const minA=(d.getMinutes()+d.getSeconds()/60)/60*Math.PI*2-Math.PI/2;
+  const hrA=((d.getHours()%12)+d.getMinutes()/60)/12*Math.PI*2-Math.PI/2;
+  // Hour hand
+  c.strokeStyle='#1a1a1a';c.lineWidth=2.5;c.lineCap='round';
+  c.beginPath();c.moveTo(clkX,clkY);c.lineTo(clkX+Math.cos(hrA)*9,clkY+Math.sin(hrA)*9);c.stroke();
+  // Minute hand
+  c.lineWidth=2;
+  c.beginPath();c.moveTo(clkX,clkY);c.lineTo(clkX+Math.cos(minA)*13,clkY+Math.sin(minA)*13);c.stroke();
+  // Second hand
+  c.strokeStyle='#cc2222';c.lineWidth=1;
+  c.beginPath();c.moveTo(clkX,clkY);c.lineTo(clkX+Math.cos(secA)*15,clkY+Math.sin(secA)*15);c.stroke();
+  c.lineCap='butt';
+  // Center hub
+  c.fillStyle='#1a1a1a';c.beginPath();c.arc(clkX,clkY,2,0,Math.PI*2);c.fill();
+
+  // Chalkboard "Today's Specials" (left side, between arcade and lamp)
+  const cbX=80,cbY=75,cbW=100,cbH=62;
+  // Frame shadow
+  c.fillStyle='#2a1a0a';c.fillRect(cbX-3,cbY-3,cbW+6,cbH+6);
+  // Wooden frame
+  const cbFrame=c.createLinearGradient(0,cbY-3,0,cbY+cbH+3);
+  cbFrame.addColorStop(0,'#8a5830');
+  cbFrame.addColorStop(1,'#5a3418');
+  c.fillStyle=cbFrame;c.fillRect(cbX-3,cbY-3,cbW+6,cbH+6);
+  c.strokeStyle='#3a1a08';c.lineWidth=1;c.strokeRect(cbX-3,cbY-3,cbW+6,cbH+6);
+  // Chalkboard surface
+  c.fillStyle='#0a2a0a';c.fillRect(cbX,cbY,cbW,cbH);
+  c.fillStyle='#0e3010';c.fillRect(cbX+1,cbY+1,cbW-2,cbH-2);
+  // Faint chalk dust streaks
+  c.fillStyle='rgba(255,255,255,0.08)';
+  for(let si=0;si<5;si++){c.fillRect(cbX+4+si*18,cbY+3,12,1);}
+  // Chalk text
+  c.fillStyle='#f8f8c0';c.font='bold 8px monospace';c.textAlign='center';
+  c.fillText('~ TODAY ~',cbX+cbW/2,cbY+12);
+  c.fillStyle='#ffccaa';
+  c.fillText('SPECIALS',cbX+cbW/2,cbY+22);
+  c.fillStyle='#ccffcc';c.font='bold 6px monospace';
+  c.fillText('* LARGE $10',cbX+cbW/2,cbY+34);
+  c.fillText('* 2 SLICES $4',cbX+cbW/2,cbY+43);
+  c.fillStyle='#ffff88';
+  c.fillText('KIDS EAT FREE!',cbX+cbW/2,cbY+54);
+  // Chalk ledge with a piece of chalk
+  c.fillStyle='#3a1a08';c.fillRect(cbX-3,cbY+cbH+3,cbW+6,2);
+  c.fillStyle='#ffffff';c.fillRect(cbX+20,cbY+cbH+4,6,1);
+  c.fillStyle='#cc4444';c.fillRect(cbX+30,cbY+cbH+4,4,1);
+
+  // Garlic & chili pepper string hanging (between lamp1 and window)
+  const gsX=223;
+  c.strokeStyle='#4a3a1a';c.lineWidth=1;
+  c.beginPath();c.moveTo(gsX,10);c.lineTo(gsX,18);c.stroke();
+  // Alternating garlic and chili
+  for(let gi=0;gi<5;gi++){
+    const gy=18+gi*11;
+    if(gi%2===0){
+      // Garlic bulb
+      c.fillStyle='#f8f0d8';c.beginPath();c.ellipse(gsX,gy+4,5,6,0,0,Math.PI*2);c.fill();
+      c.fillStyle='#e0d4b0';c.beginPath();c.ellipse(gsX-1.5,gy+3,1.5,4,0.2,0,Math.PI*2);c.fill();
+      c.fillStyle='#c8bc98';c.beginPath();c.ellipse(gsX+1.5,gy+3,1.5,4,-0.2,0,Math.PI*2);c.fill();
+      c.strokeStyle='#aaa080';c.lineWidth=0.5;c.beginPath();c.moveTo(gsX,gy-2);c.lineTo(gsX,gy+8);c.stroke();
+      c.fillStyle='#7a9040';c.fillRect(gsX-1,gy-3,2,2);
+    }else{
+      // Red chili pepper
+      c.fillStyle='#aa1010';c.beginPath();c.ellipse(gsX,gy+5,2.5,7,0,0,Math.PI*2);c.fill();
+      c.fillStyle='#dd2020';c.beginPath();c.ellipse(gsX-0.5,gy+4,1.5,6,0,0,Math.PI*2);c.fill();
+      c.fillStyle='#5a7a2a';c.fillRect(gsX-1,gy-2,2,3);
+    }
+  }
+
+  // Pizza boxes stacked near counter (on floor)
+  const pbX=560,pbY=FLOOR_Y+8;
+  for(let pb=0;pb<3;pb++){
+    const py=pbY+pb*8;
+    // Box shadow
+    c.fillStyle='rgba(0,0,0,0.3)';c.fillRect(pbX-2,py+8,52,2);
+    // Box
+    c.fillStyle='#d8b488';c.fillRect(pbX,py,50,8);
+    c.fillStyle='#e8c498';c.fillRect(pbX,py,50,2);
+    c.strokeStyle='#8a6438';c.lineWidth=1;c.strokeRect(pbX+0.5,py+0.5,49,7);
+    // Red pizza logo
+    c.fillStyle='#cc2222';c.beginPath();c.arc(pbX+8,py+4,2,0,Math.PI*2);c.fill();
+    c.fillStyle='#ffffff';c.font='bold 5px monospace';c.textAlign='left';
+    c.fillText("TONY'S",pbX+12,py+6);
+  }
+
+  // Mouse peeking from wainscoting (easter egg, bottom-left)
+  const msT=Math.floor(nowT/3000)%4;
+  if(msT<2){
+    const msX=4,msY=TABLE_Y-10;
+    // Mouse body
+    c.fillStyle='#6a5a4a';c.beginPath();c.ellipse(msX+4,msY+4,5,3,0,0,Math.PI*2);c.fill();
+    // Head
+    c.fillStyle='#7a6a5a';c.beginPath();c.arc(msX+7,msY+3,3,0,Math.PI*2);c.fill();
+    // Ear
+    c.fillStyle='#8a7a6a';c.beginPath();c.arc(msX+8,msY+1,1.5,0,Math.PI*2);c.fill();
+    c.fillStyle='#d8a0a0';c.beginPath();c.arc(msX+8,msY+1,0.7,0,Math.PI*2);c.fill();
+    // Eye
+    c.fillStyle='#000';c.beginPath();c.arc(msX+9,msY+3,0.6,0,Math.PI*2);c.fill();
+    // Nose
+    c.fillStyle='#ff88aa';c.fillRect(msX+10,msY+3,1,1);
+    // Whiskers
+    c.strokeStyle='#fff';c.lineWidth=0.5;
+    c.beginPath();c.moveTo(msX+10,msY+3.5);c.lineTo(msX+13,msY+3);c.stroke();
+    c.beginPath();c.moveTo(msX+10,msY+4);c.lineTo(msX+13,msY+5);c.stroke();
+  }
+
+  // Cracks in the wall for character
+  c.strokeStyle='rgba(60,30,10,0.25)';c.lineWidth=1;
+  c.beginPath();c.moveTo(420,20);c.lineTo(425,35);c.lineTo(422,50);c.lineTo(430,60);c.stroke();
+  c.beginPath();c.moveTo(70,110);c.lineTo(74,120);c.lineTo(72,132);c.stroke();
+
   // Napkin dispenser on table edge (will be drawn with table)
   // Salt and pepper shakers near center
 }
@@ -1152,6 +1343,50 @@ function renderTable(){
   c.fillStyle='#2a2a2a';c.fillRect(280,TABLE_Y+14,8,14);c.fillStyle='#444';c.fillRect(280,TABLE_Y+12,8,4);
   // Red pepper flake shaker
   c.fillStyle='#cc3333';c.fillRect(256,TABLE_Y+16,7,12);c.fillStyle='#aa2222';c.fillRect(256,TABLE_Y+14,7,4);
+
+  // Wine bottle (right of napkin dispenser, left of Bro 1 plate)
+  const wbX=405,wbY=TABLE_Y+12;
+  c.fillStyle='rgba(0,0,0,0.3)';c.fillRect(wbX-4,wbY+26,10,2);
+  c.fillStyle='#1a4a1a';c.fillRect(wbX-3,wbY,6,6);c.fillRect(wbX-4,wbY+4,8,4);
+  const bottleGrad=c.createLinearGradient(wbX-4,wbY,wbX+4,wbY);
+  bottleGrad.addColorStop(0,'#0a2a0a');bottleGrad.addColorStop(0.5,'#2a5a1a');bottleGrad.addColorStop(1,'#0a2a0a');
+  c.fillStyle=bottleGrad;c.fillRect(wbX-4,wbY+7,8,20);
+  c.fillStyle='#5a2a0a';c.fillRect(wbX-3,wbY-2,6,3);
+  // Wine label
+  c.fillStyle='#f0e8c0';c.fillRect(wbX-3,wbY+12,6,8);
+  c.fillStyle='#8a1010';c.fillRect(wbX-2,wbY+13,4,1);
+  c.fillStyle='#444';c.fillRect(wbX-2,wbY+15,4,1);c.fillRect(wbX-2,wbY+17,4,1);
+
+  // Candle with flickering flame (between left plate and shakers)
+  const cdX=220,cdY=TABLE_Y+18;
+  // Candle holder base
+  c.fillStyle='rgba(0,0,0,0.3)';c.beginPath();c.ellipse(cdX,cdY+18,8,2,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#aaaa44';c.beginPath();c.ellipse(cdX,cdY+16,7,2.5,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#ccbb55';c.fillRect(cdX-6,cdY+14,12,2);
+  c.fillStyle='#888833';c.fillRect(cdX-2,cdY+8,4,8);
+  // Candle wax (dripping)
+  c.fillStyle='#f4ecc8';c.fillRect(cdX-2,cdY-4,4,12);
+  c.fillStyle='#e8dcb0';c.fillRect(cdX+1,cdY-4,1,12);
+  c.fillStyle='#d8c898';c.fillRect(cdX-3,cdY-1,1,9);
+  // Drip
+  c.fillStyle='#f4ecc8';c.beginPath();c.arc(cdX-2,cdY+2,1.5,0,Math.PI*2);c.fill();
+  // Wick
+  c.fillStyle='#1a1a1a';c.fillRect(cdX,cdY-6,1,3);
+  // Flame (flickering)
+  const flickerT=performance.now()*0.015;
+  const fsz=1+Math.sin(flickerT)*0.2;
+  const fsway=Math.sin(flickerT*0.7)*0.5;
+  // Outer glow
+  const flameGlow=c.createRadialGradient(cdX+fsway,cdY-9,1,cdX,cdY-9,14);
+  flameGlow.addColorStop(0,'rgba(255,200,80,0.5)');
+  flameGlow.addColorStop(1,'rgba(255,200,80,0)');
+  c.fillStyle=flameGlow;c.fillRect(cdX-14,cdY-22,28,20);
+  // Outer flame
+  c.fillStyle='#ff8822';c.beginPath();c.ellipse(cdX+fsway,cdY-9,2.5*fsz,5*fsz,fsway*0.1,0,Math.PI*2);c.fill();
+  // Mid flame
+  c.fillStyle='#ffcc44';c.beginPath();c.ellipse(cdX+fsway*0.7,cdY-9,1.8*fsz,3.5*fsz,0,0,Math.PI*2);c.fill();
+  // Core
+  c.fillStyle='#fff4cc';c.beginPath();c.ellipse(cdX+fsway*0.5,cdY-8,1,2*fsz,0,0,Math.PI*2);c.fill();
 }
 
 // Canvas-drawn food (better looking than pixel sprites at this scale)
@@ -1317,6 +1552,17 @@ function drawCaesarSalad(cx,cy){
   c.beginPath();c.arc(cx-2,cy+2,2,Math.PI,0);c.stroke();
 }
 
+function drawFly(cx,cy,time){
+  // Animated body
+  c.fillStyle='#1a1a1a';c.beginPath();c.ellipse(cx,cy,2.2,1.4,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#3a3a3a';c.beginPath();c.ellipse(cx-0.5,cy-0.3,1.2,0.7,0,0,Math.PI*2);c.fill();
+  // Buzzing wings (alternate)
+  const wingP=Math.sin(time*0.08);
+  c.fillStyle='rgba(220,220,255,0.55)';
+  c.beginPath();c.ellipse(cx-1,cy-1.5+wingP*0.5,2,1,-0.4,0,Math.PI*2);c.fill();
+  c.beginPath();c.ellipse(cx+1,cy-1.5-wingP*0.5,2,1,0.4,0,Math.PI*2);c.fill();
+}
+
 function renderTableItems(){
   const boys=GameEngine.getBoys();
   const t=performance.now();
@@ -1334,6 +1580,12 @@ function renderTableItems(){
   }
   // Dad's caesar salad (center)
   drawCaesarSalad(320,TABLE_Y+36);
+
+  // Buzzing fly flying around the table in a figure-8
+  const flyT=t*0.002;
+  const flyX=320+Math.sin(flyT)*120;
+  const flyY=TABLE_Y+20+Math.sin(flyT*2)*12;
+  drawFly(flyX,flyY,t);
 }
 
 function drawStretchyArm(startX,startY,endX,endY,progress,blocked){
