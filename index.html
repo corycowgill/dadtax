@@ -514,7 +514,7 @@ function createBoy(name,side){
   return{name,side,state:"idle",slices:4,stamina:STAMINA_MAX,staminaExhausted:false,
     blockTimer:0,indicator:"",bobPhase:rngf(0,Math.PI*2),
     // AI state
-    aiState:"idle",aiTimer:0,alertness:0.3,personality:name==="Bro 2"?"cautious":"aggressive"};
+    aiState:"idle",aiTimer:0,blockCooldown:0,alertness:0.1,personality:name==="Bro 2"?"cautious":"aggressive"};
 }
 
 function updateBoyPlayer(boy,isBlocking){
@@ -550,28 +550,30 @@ function updateBoyAI(boy, dad, frameCount) {
     return;
   }
 
+  // Tick down post-block cooldown (gives dad a window to steal after a block)
+  if (boy.blockCooldown > 0) boy.blockCooldown--;
+  const canBlock = boy.blockCooldown <= 0;
+
   const iAmTarget = (boy.side === "left" && dad.target === "left") || (boy.side === "right" && dad.target === "right");
   const dadReaching = dad.state === "reaching" && iAmTarget;
-  const dadEating = dad.state === "eating" && iAmTarget;
 
   // Personality-based parameters
   const isCautious = boy.personality === "cautious";
-  // Base reaction chance per frame, escalates with alertness
-  const reactChance = isCautious ? 0.04 : 0.06;
-  // How quickly alertness rises after a steal
-  const alertGrowth = isCautious ? 0.08 : 0.12;
-  // Chance to randomly block (fidgety/paranoid)
-  const paranoidChance = boy.alertness * (isCautious ? 0.003 : 0.005);
-  // How long AI holds block (in frames)
-  const blockDuration = isCautious ? rng(40, 80) : rng(30, 60);
+  // Base reaction chance per frame (much lower so dad has a real shot)
+  const reactChance = isCautious ? 0.002 : 0.004;
+  // Chance to randomly block (fidgety/paranoid) - greatly reduced
+  const paranoidChance = boy.alertness * (isCautious ? 0.0004 : 0.0008);
+  // How long AI holds block (in frames) - shorter so blocks release sooner
+  const blockDuration = isCautious ? rng(22, 38) : rng(15, 30);
 
   switch (boy.aiState) {
     case "idle":
       // Watch for dad reaching toward us
-      if (dadReaching) {
+      if (dadReaching && canBlock) {
         // Reaction chance increases with alertness and dad's reach progress
+        // Much gentler scaling so dad isn't auto-blocked
         const reactionRoll = Math.random();
-        const threshold = reactChance + boy.alertness * 0.15 + dad.reachProgress * 0.3;
+        const threshold = reactChance + boy.alertness * 0.02 + dad.reachProgress * 0.04;
         if (reactionRoll < threshold) {
           boy.aiState = "blocking";
           boy.aiTimer = blockDuration;
@@ -582,18 +584,18 @@ function updateBoyAI(boy, dad, frameCount) {
       }
 
       // Random paranoid block
-      if (Math.random() < paranoidChance) {
+      if (canBlock && Math.random() < paranoidChance) {
         boy.aiState = "blocking";
-        boy.aiTimer = rng(20, 50);
+        boy.aiTimer = rng(15, 35);
         boy.state = "blocking";
         boy.indicator = "!";
         break;
       }
 
-      // Random distraction
-      if (Math.random() < 0.002) {
+      // Random distraction - more frequent to create more windows
+      if (Math.random() < 0.006) {
         boy.aiState = "distracted";
-        boy.aiTimer = rng(60, 180);
+        boy.aiTimer = rng(80, 200);
         boy.state = "distracted";
         boy.indicator = "";
       }
@@ -613,11 +615,15 @@ function updateBoyAI(boy, dad, frameCount) {
         boy.aiState = "idle";
         boy.state = "idle";
         boy.indicator = "";
+        boy.blockCooldown = 160;
       }
       if (boy.aiTimer <= 0) {
         boy.aiState = "idle";
         boy.state = "idle";
         boy.indicator = "";
+        // Long cooldown guarantees dad a real steal window after every block
+        // (must exceed dad's blocked+cooldown recovery of ~110 frames)
+        boy.blockCooldown = rng(160, 220);
       }
       break;
 
@@ -626,8 +632,8 @@ function updateBoyAI(boy, dad, frameCount) {
       boy.state = "distracted";
       boy.indicator = "";
       boy.stamina = Math.min(STAMINA_MAX, boy.stamina + STAMINA_RECHARGE_RATE);
-      // Can snap out of distraction if dad is reaching for us
-      if (dadReaching && Math.random() < (reactChance + boy.alertness * 0.1)) {
+      // Can snap out of distraction only rarely, and only if not on cooldown
+      if (dadReaching && canBlock && Math.random() < (reactChance + boy.alertness * 0.02)) {
         boy.aiState = "blocking";
         boy.aiTimer = blockDuration;
         boy.state = "blocking";
@@ -663,11 +669,11 @@ function updateDad(dad,input,boys,particles,popups,taxMeter,audioCallback,gameMo
           dad.state="eating";dad.stateTimer=DAD_EAT_FRAMES;dad.reachProgress=1;audioCallback("grab");setTimeout(()=>audioCallback("eat"),300);
           const px=dad.target==="left"?280:520;for(let i=0;i<8;i++)particles.push(createParticle(px,240,"crumb"));
           const label=sliceType==="cheese"?"CHEESE!":"SAUSAGE!";popups.push(createPopup(400,140,"DAD TAX!","#FFD700",32));popups.push(createPopup(px,200,label,"#FFA500",22));
-          // Increase AI alertness on steal
+          // Increase AI alertness on steal (capped so it stays beatable)
           if(gameMode==="1P"){
-            targetBoy.alertness=Math.min(1,targetBoy.alertness+0.12);
+            targetBoy.alertness=Math.min(0.7,targetBoy.alertness+0.05);
             const otherBoy=dad.target==="left"?boys[1]:boys[0];
-            otherBoy.alertness=Math.min(1,otherBoy.alertness+0.06);
+            otherBoy.alertness=Math.min(0.7,otherBoy.alertness+0.02);
           }
         }
       }break;
