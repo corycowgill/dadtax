@@ -877,21 +877,56 @@ function drawTextShadow(text,x,y,color,shadow,size,align){drawText(text,x+2,y+2,
 const TABLE_Y=180,TABLE_H=160,TABLE_X=80,TABLE_W=480,FLOOR_Y=TABLE_Y+TABLE_H;
 
 function renderBackground(){
-  // Wall
-  fillTiles(c,TILES.wall,PALETTES.wall,0,0,W,TABLE_Y,2);
-  // Floor (checkered tile)
+  // Wall with warm gradient (painted plaster look)
+  const wallGrad=c.createLinearGradient(0,0,0,TABLE_Y);
+  wallGrad.addColorStop(0,'#d4b892');
+  wallGrad.addColorStop(0.5,'#c0a078');
+  wallGrad.addColorStop(1,'#a88860');
+  c.fillStyle=wallGrad;c.fillRect(0,0,W,TABLE_Y);
+  // Subtle brick pattern overlay
+  c.fillStyle='rgba(90,55,30,0.12)';
+  for(let by=0;by<TABLE_Y-30;by+=14){
+    const off=(Math.floor(by/14)%2)*14;
+    for(let bx=-14;bx<W;bx+=28){
+      c.fillRect(bx+off,by,26,1);
+    }
+    c.fillRect(0,by+13,W,1);
+  }
+  // Vertical brick divisions
+  c.fillStyle='rgba(90,55,30,0.10)';
+  for(let by=0;by<TABLE_Y-30;by+=14){
+    const off=(Math.floor(by/14)%2)*14;
+    for(let bx=-14;bx<W;bx+=28){
+      c.fillRect(bx+off+26,by,1,13);
+    }
+  }
+
+  // Floor with perspective (checkered tile)
   fillTiles(c,TILES.floor,PALETTES.floor,0,FLOOR_Y,W,H-FLOOR_Y,2);
+  // Floor ambient shadow
+  const floorShade=c.createLinearGradient(0,FLOOR_Y,0,H);
+  floorShade.addColorStop(0,'rgba(0,0,0,0.35)');
+  floorShade.addColorStop(0.2,'rgba(0,0,0,0.05)');
+  floorShade.addColorStop(1,'rgba(0,0,0,0.3)');
+  c.fillStyle=floorShade;c.fillRect(0,FLOOR_Y,W,H-FLOOR_Y);
 
   // === PIZZA PARLOR DETAILS ===
 
-  // Wainscoting / lower wall trim
-  c.fillStyle='#7a5030';c.fillRect(0,TABLE_Y-30,W,30);
-  c.fillStyle='#6a4020';c.fillRect(0,TABLE_Y-30,W,3);
-  c.fillStyle='#8a6040';c.fillRect(0,TABLE_Y-4,W,4);
-  // Wainscoting panels
+  // Wainscoting / lower wall trim with gradient
+  const wainGrad=c.createLinearGradient(0,TABLE_Y-30,0,TABLE_Y);
+  wainGrad.addColorStop(0,'#8a5830');
+  wainGrad.addColorStop(1,'#6a3e1c');
+  c.fillStyle=wainGrad;c.fillRect(0,TABLE_Y-30,W,30);
+  c.fillStyle='#4a2810';c.fillRect(0,TABLE_Y-30,W,2);
+  c.fillStyle='#aa7040';c.fillRect(0,TABLE_Y-28,W,1);
+  c.fillStyle='#9a6838';c.fillRect(0,TABLE_Y-5,W,3);
+  c.fillStyle='#4a2810';c.fillRect(0,TABLE_Y-2,W,2);
+  // Wainscoting panels with depth
   for(let px=10;px<W;px+=60){
-    c.strokeStyle='#6a4020';c.lineWidth=1;
-    c.strokeRect(px,TABLE_Y-27,50,22);
+    c.strokeStyle='#4a2810';c.lineWidth=1;
+    c.strokeRect(px,TABLE_Y-26,50,20);
+    c.strokeStyle='rgba(220,180,120,0.3)';
+    c.beginPath();c.moveTo(px+1,TABLE_Y-7);c.lineTo(px+49,TABLE_Y-7);c.lineTo(px+49,TABLE_Y-25);c.stroke();
   }
 
   // Arcade cabinet (left wall)
@@ -973,30 +1008,138 @@ function renderBackground(){
   c.fillStyle='#ffcc00';
   c.fillText('COMBO  $12',585,fy+44);
 
-  // Hanging pendant lamps
-  for(const lx of [200,440]){
-    c.strokeStyle='#333';c.lineWidth=2;c.beginPath();c.moveTo(lx,0);c.lineTo(lx,35);c.stroke();
-    // Lamp shade
-    c.fillStyle='#cc4422';c.beginPath();c.moveTo(lx-12,35);c.lineTo(lx+12,35);c.lineTo(lx+8,45);c.lineTo(lx-8,45);c.closePath();c.fill();
-    c.strokeStyle='#aa3311';c.lineWidth=1;c.stroke();
-    // Light glow
-    c.fillStyle='rgba(255,220,150,0.15)';c.beginPath();c.moveTo(lx-8,45);c.lineTo(lx+8,45);c.lineTo(lx+30,TABLE_Y-30);c.lineTo(lx-30,TABLE_Y-30);c.closePath();c.fill();
+  // Window with night sky (below neon sign)
+  const wx=260,wy=55,wW=120,wH=80;
+  // Frame shadow
+  c.fillStyle='#3a1f0a';c.fillRect(wx-4,wy-4,wW+8,wH+8);
+  // Outer frame
+  c.fillStyle='#6a3e1c';c.fillRect(wx-3,wy-3,wW+6,wH+6);
+  // Night sky gradient
+  const skyGrad=c.createLinearGradient(0,wy,0,wy+wH);
+  skyGrad.addColorStop(0,'#0a0a2a');
+  skyGrad.addColorStop(0.6,'#1a1a3a');
+  skyGrad.addColorStop(1,'#2a1a3a');
+  c.fillStyle=skyGrad;c.fillRect(wx,wy,wW,wH);
+  // Stars (twinkling)
+  const twinkle=performance.now()*0.002;
+  const starPositions=[[15,12],[32,25],[48,8],[65,18],[82,30],[95,10],[110,22],[125,35],[22,42],[55,48],[88,52],[118,45]];
+  for(let i=0;i<starPositions.length;i++){
+    const[sx,sy]=starPositions[i];
+    const bright=0.5+Math.sin(twinkle+i*1.3)*0.5;
+    c.fillStyle=`rgba(255,255,220,${bright})`;
+    c.fillRect(wx+sx,wy+sy,1,1);
+    if(bright>0.8){
+      c.fillStyle=`rgba(255,255,220,${bright*0.3})`;
+      c.fillRect(wx+sx-1,wy+sy,3,1);c.fillRect(wx+sx,wy+sy-1,1,3);
+    }
   }
+  // Moon
+  c.fillStyle='#f0e8c0';c.beginPath();c.arc(wx+wW-25,wy+20,9,0,Math.PI*2);c.fill();
+  c.fillStyle='#d8d0a8';c.beginPath();c.arc(wx+wW-22,wy+19,7,0,Math.PI*2);c.fill();
+  c.fillStyle='#b8b088';c.beginPath();c.arc(wx+wW-27,wy+22,1.5,0,Math.PI*2);c.fill();c.beginPath();c.arc(wx+wW-20,wy+17,1,0,Math.PI*2);c.fill();
+  // Window cross frame
+  c.fillStyle='#6a3e1c';c.fillRect(wx+wW/2-2,wy,4,wH);c.fillRect(wx,wy+wH/2-2,wW,4);
+  c.fillStyle='#8a5a30';c.fillRect(wx+wW/2-2,wy,1,wH);c.fillRect(wx,wy+wH/2-2,wW,1);
+  // Window sill
+  c.fillStyle='#8a5a30';c.fillRect(wx-5,wy+wH,wW+10,4);
+  c.fillStyle='#6a3e1c';c.fillRect(wx-5,wy+wH+4,wW+10,2);
+  // Red checkered curtains
+  for(let side=0;side<2;side++){
+    const cx1=side?wx+wW:wx-12;
+    for(let ry=0;ry<wH;ry+=4){
+      const row=Math.floor(ry/4);
+      for(let rx=0;rx<12;rx+=4){
+        c.fillStyle=((row+rx/4)%2===0)?'#cc2222':'#ffffff';
+        c.fillRect(cx1+rx,wy+ry,4,4);
+      }
+    }
+    c.strokeStyle='#6a1010';c.lineWidth=1;c.strokeRect(cx1,wy,12,wH);
+  }
+
+  // Hanging pendant lamps with stronger glow
+  for(const lx of [200,440]){
+    // Cord
+    c.strokeStyle='#2a2a2a';c.lineWidth=2;c.beginPath();c.moveTo(lx,0);c.lineTo(lx,35);c.stroke();
+    c.strokeStyle='#4a4a4a';c.lineWidth=1;c.beginPath();c.moveTo(lx-1,0);c.lineTo(lx-1,35);c.stroke();
+    // Lamp shade with gradient
+    const shadeGrad=c.createLinearGradient(lx-12,35,lx+12,45);
+    shadeGrad.addColorStop(0,'#881a0a');
+    shadeGrad.addColorStop(0.5,'#dd4a22');
+    shadeGrad.addColorStop(1,'#881a0a');
+    c.fillStyle=shadeGrad;c.beginPath();c.moveTo(lx-12,35);c.lineTo(lx+12,35);c.lineTo(lx+8,45);c.lineTo(lx-8,45);c.closePath();c.fill();
+    c.strokeStyle='#4a0808';c.lineWidth=1;c.stroke();
+    // Lamp rim
+    c.fillStyle='#ffcc44';c.fillRect(lx-8,45,16,1);
+    // Bulb glow
+    const bulbGlow=c.createRadialGradient(lx,47,1,lx,47,8);
+    bulbGlow.addColorStop(0,'rgba(255,240,180,0.9)');
+    bulbGlow.addColorStop(1,'rgba(255,240,180,0)');
+    c.fillStyle=bulbGlow;c.fillRect(lx-10,40,20,20);
+    // Light cone (brighter)
+    const coneGrad=c.createLinearGradient(0,46,0,TABLE_Y-30);
+    coneGrad.addColorStop(0,'rgba(255,220,150,0.28)');
+    coneGrad.addColorStop(1,'rgba(255,220,150,0)');
+    c.fillStyle=coneGrad;c.beginPath();c.moveTo(lx-8,46);c.lineTo(lx+8,46);c.lineTo(lx+38,TABLE_Y-30);c.lineTo(lx-38,TABLE_Y-30);c.closePath();c.fill();
+  }
+
+  // Potted plant (right side floor)
+  const potX=60,potY=FLOOR_Y-2;
+  // Leaves
+  c.fillStyle='#1a5a1a';
+  for(let i=0;i<7;i++){
+    const a=i*0.9-Math.PI/2;const d=14;
+    const lx=potX+Math.cos(a)*d;const ly=potY-20+Math.sin(a)*8;
+    c.beginPath();c.ellipse(lx,ly,5,10,a,0,Math.PI*2);c.fill();
+  }
+  c.fillStyle='#2a7a2a';
+  for(let i=0;i<5;i++){
+    const a=i*1.1-Math.PI/2+0.3;const d=10;
+    const lx=potX+Math.cos(a)*d;const ly=potY-24+Math.sin(a)*6;
+    c.beginPath();c.ellipse(lx,ly,4,8,a,0,Math.PI*2);c.fill();
+  }
+  // Pot
+  c.fillStyle='#8a3a1a';c.beginPath();c.moveTo(potX-12,potY-8);c.lineTo(potX+12,potY-8);c.lineTo(potX+10,potY+8);c.lineTo(potX-10,potY+8);c.closePath();c.fill();
+  c.fillStyle='#aa5a2a';c.fillRect(potX-12,potY-8,24,3);
+  c.strokeStyle='#5a1a0a';c.lineWidth=1;c.beginPath();c.moveTo(potX-12,potY-8);c.lineTo(potX+12,potY-8);c.lineTo(potX+10,potY+8);c.lineTo(potX-10,potY+8);c.closePath();c.stroke();
 
   // Napkin dispenser on table edge (will be drawn with table)
   // Salt and pepper shakers near center
 }
 
 function renderTable(){
+  // Table drop shadow on floor
+  c.fillStyle='rgba(0,0,0,0.35)';
+  c.beginPath();c.ellipse(320,TABLE_Y+TABLE_H+18,TABLE_W/2+20,10,0,0,Math.PI*2);c.fill();
+
   c.fillStyle='#3a2010';c.fillRect(TABLE_X-4,TABLE_Y-4,TABLE_W+8,TABLE_H+8);
   fillTiles(c,TILES.tableWood,PALETTES.table,TABLE_X,TABLE_Y,TABLE_W,TABLE_H,2);
   fillTiles(c,TILES.tablecloth,PALETTES.tablecloth,TABLE_X+8,TABLE_Y+8,TABLE_W-16,112,2);
+  // Tablecloth fringe
+  c.fillStyle='#e0e0e0';
+  for(let fx=TABLE_X+8;fx<TABLE_X+TABLE_W-8;fx+=6){
+    c.fillRect(fx,TABLE_Y+120,3,4);
+  }
+  // Radial warm lighting highlight on center of table
+  const tableLight=c.createRadialGradient(320,TABLE_Y+60,20,320,TABLE_Y+60,260);
+  tableLight.addColorStop(0,'rgba(255,230,160,0.22)');
+  tableLight.addColorStop(1,'rgba(255,230,160,0)');
+  c.fillStyle=tableLight;c.fillRect(TABLE_X,TABLE_Y,TABLE_W,TABLE_H);
+  // Darker edges vignette on table
+  const tableVig=c.createRadialGradient(320,TABLE_Y+60,100,320,TABLE_Y+60,320);
+  tableVig.addColorStop(0,'rgba(0,0,0,0)');
+  tableVig.addColorStop(1,'rgba(0,0,0,0.35)');
+  c.fillStyle=tableVig;c.fillRect(TABLE_X,TABLE_Y,TABLE_W,TABLE_H);
+
   c.fillStyle='#5a3818';c.fillRect(TABLE_X,TABLE_Y+TABLE_H-12,TABLE_W,12);
+  c.fillStyle='#7a5020';c.fillRect(TABLE_X,TABLE_Y+TABLE_H-12,TABLE_W,2);
   c.fillStyle='#3a2010';c.fillRect(TABLE_X,TABLE_Y+TABLE_H-4,TABLE_W,4);
-  // Table legs
+  // Table legs with shading
   c.fillStyle='#3a2010';
   c.fillRect(TABLE_X+10,TABLE_Y+TABLE_H,8,H-TABLE_Y-TABLE_H);
   c.fillRect(TABLE_X+TABLE_W-18,TABLE_Y+TABLE_H,8,H-TABLE_Y-TABLE_H);
+  c.fillStyle='#5a3018';
+  c.fillRect(TABLE_X+11,TABLE_Y+TABLE_H,2,H-TABLE_Y-TABLE_H);
+  c.fillRect(TABLE_X+TABLE_W-17,TABLE_Y+TABLE_H,2,H-TABLE_Y-TABLE_H);
   // Napkin dispenser (center-right of table)
   c.fillStyle='#c0c0c0';c.fillRect(368,TABLE_Y+8,16,20);
   c.fillStyle='#ddd';c.fillRect(370,TABLE_Y+10,12,16);
@@ -1013,52 +1156,135 @@ function renderTable(){
 
 // Canvas-drawn food (better looking than pixel sprites at this scale)
 function drawPlate(cx,cy,r){
-  c.fillStyle='#e8e8e0';c.beginPath();c.ellipse(cx,cy,r,r*0.7,0,0,Math.PI*2);c.fill();
-  c.strokeStyle='#c0c0b0';c.lineWidth=2;c.stroke();
-  c.fillStyle='#f4f4ec';c.beginPath();c.ellipse(cx,cy-1,r-4,r*0.7-3,0,0,Math.PI*2);c.fill();
+  // Plate shadow
+  c.fillStyle='rgba(0,0,0,0.25)';c.beginPath();c.ellipse(cx+2,cy+3,r+1,r*0.7+1,0,0,Math.PI*2);c.fill();
+  // Plate base
+  c.fillStyle='#d0d0c4';c.beginPath();c.ellipse(cx,cy,r,r*0.7,0,0,Math.PI*2);c.fill();
+  c.strokeStyle='#a8a898';c.lineWidth=2;c.stroke();
+  // Plate rim ring
+  c.fillStyle='#e8e8dc';c.beginPath();c.ellipse(cx,cy-1,r-2,r*0.7-1.5,0,0,Math.PI*2);c.fill();
+  // Inner plate
+  c.fillStyle='#f4f4ec';c.beginPath();c.ellipse(cx,cy-1,r-5,r*0.7-4,0,0,Math.PI*2);c.fill();
+  // Shine highlight
+  c.fillStyle='rgba(255,255,255,0.7)';
+  c.beginPath();c.ellipse(cx-r*0.4,cy-r*0.35,r*0.2,r*0.08,-0.3,0,Math.PI*2);c.fill();
 }
 
 function drawPizzaWhole(cx,cy,r,type){
-  // Crust ring
-  c.fillStyle='#c8942a';c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.fill();
-  c.strokeStyle='#8a5a20';c.lineWidth=2;c.stroke();
-  // Sauce
-  c.fillStyle='#cc4420';c.beginPath();c.arc(cx,cy,r-4,0,Math.PI*2);c.fill();
-  // Cheese
-  c.fillStyle='#f0c040';c.beginPath();c.arc(cx,cy,r-6,0,Math.PI*2);c.fill();
-  // Cheese highlights
+  // Crust with radial gradient
+  const crustGrad=c.createRadialGradient(cx-r*0.3,cy-r*0.3,r*0.3,cx,cy,r);
+  crustGrad.addColorStop(0,'#e0a840');
+  crustGrad.addColorStop(0.7,'#c8942a');
+  crustGrad.addColorStop(1,'#8a5a20');
+  c.fillStyle=crustGrad;c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.fill();
+  c.strokeStyle='#6a3a10';c.lineWidth=2;c.stroke();
+  // Crust bumps
+  c.fillStyle='#daa540';
+  for(let i=0;i<10;i++){const a=i*Math.PI*2/10;c.beginPath();c.arc(cx+Math.cos(a)*(r-2),cy+Math.sin(a)*(r-2),1.5,0,Math.PI*2);c.fill();}
+  // Sauce layer
+  const sauceGrad=c.createRadialGradient(cx-2,cy-2,2,cx,cy,r-4);
+  sauceGrad.addColorStop(0,'#dd5a28');
+  sauceGrad.addColorStop(1,'#a83010');
+  c.fillStyle=sauceGrad;c.beginPath();c.arc(cx,cy,r-4,0,Math.PI*2);c.fill();
+  // Cheese with gradient
+  const cheeseGrad=c.createRadialGradient(cx-r*0.3,cy-r*0.3,2,cx,cy,r-5);
+  cheeseGrad.addColorStop(0,'#fff0a0');
+  cheeseGrad.addColorStop(0.7,'#f0c040');
+  cheeseGrad.addColorStop(1,'#d8a020');
+  c.fillStyle=cheeseGrad;c.beginPath();c.arc(cx,cy,r-6,0,Math.PI*2);c.fill();
+  // Melted cheese bubbles / browning spots
   c.fillStyle='#ffe060';
-  for(let i=0;i<5;i++){const a=i*1.25;const d=r*0.4;c.beginPath();c.arc(cx+Math.cos(a)*d,cy+Math.sin(a)*d,3,0,Math.PI*2);c.fill();}
+  for(let i=0;i<6;i++){const a=i*1.05+0.3;const d=r*0.35;c.beginPath();c.arc(cx+Math.cos(a)*d,cy+Math.sin(a)*d,2.5,0,Math.PI*2);c.fill();}
+  c.fillStyle='#c88820';
+  for(let i=0;i<4;i++){const a=i*1.6+0.8;const d=r*0.5;c.beginPath();c.arc(cx+Math.cos(a)*d,cy+Math.sin(a)*d,1.2,0,Math.PI*2);c.fill();}
+  c.fillStyle='#ffffb0';
+  c.beginPath();c.arc(cx-r*0.3,cy-r*0.3,r*0.15,0,Math.PI*2);c.fill();
   // Toppings
   if(type==='sausage'){
-    const spots=[[0,-6],[-8,4],[7,3],[-3,-10],[5,-5],[-6,-3],[2,7]];
+    const spots=[[0,-6],[-8,4],[7,3],[-3,-10],[5,-5],[-6,-3],[2,7],[-10,-2],[9,-8]];
     for(const[sx,sy] of spots){
-      c.fillStyle='#6a3a1a';c.beginPath();c.arc(cx+sx,cy+sy,3,0,Math.PI*2);c.fill();
-      c.fillStyle='#8a5a2a';c.beginPath();c.arc(cx+sx,cy+sy-0.5,2,0,Math.PI*2);c.fill();
+      // Dark outer
+      c.fillStyle='#4a2010';c.beginPath();c.arc(cx+sx,cy+sy,3.2,0,Math.PI*2);c.fill();
+      // Mid tone
+      c.fillStyle='#7a3a1a';c.beginPath();c.arc(cx+sx,cy+sy,2.6,0,Math.PI*2);c.fill();
+      // Highlight
+      c.fillStyle='#a85a2a';c.beginPath();c.arc(cx+sx-0.5,cy+sy-0.8,1.5,0,Math.PI*2);c.fill();
+      c.fillStyle='#c8804a';c.beginPath();c.arc(cx+sx-0.8,cy+sy-1,0.6,0,Math.PI*2);c.fill();
     }
+  }else{
+    // Cheese pizza: basil flecks
+    c.fillStyle='#2a7a2a';
+    const basil=[[-5,-7],[6,-5],[-7,5],[4,8],[-2,2]];
+    for(const[bx,by] of basil){c.beginPath();c.ellipse(cx+bx,cy+by,1.2,0.6,by*0.2,0,Math.PI*2);c.fill();}
   }
   // Slice lines
-  c.strokeStyle='rgba(180,120,40,0.4)';c.lineWidth=1;
-  for(let i=0;i<4;i++){const a=i*Math.PI/4;c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);c.stroke();}
+  c.strokeStyle='rgba(100,60,20,0.35)';c.lineWidth=1;
+  for(let i=0;i<4;i++){const a=i*Math.PI/4;c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+Math.cos(a)*(r-3),cy+Math.sin(a)*(r-3));c.stroke();}
 }
 
 function drawPizzaSlice(cx,cy,angle,type){
   c.save();c.translate(cx,cy);c.rotate(angle);
-  // Slice triangle
+  // Slice shadow
+  c.fillStyle='rgba(0,0,0,0.25)';
+  c.beginPath();c.moveTo(1,-1);c.lineTo(-9,17);c.lineTo(9,17);c.closePath();c.fill();
+  // Crust base
   c.fillStyle='#c8942a';c.beginPath();c.moveTo(0,-2);c.lineTo(-8,16);c.lineTo(8,16);c.closePath();c.fill();
-  c.fillStyle='#f0c040';c.beginPath();c.moveTo(0,0);c.lineTo(-6,14);c.lineTo(6,14);c.closePath();c.fill();
-  // Crust arc
-  c.fillStyle='#c8942a';c.beginPath();c.ellipse(0,16,9,4,0,0,Math.PI);c.fill();
-  c.strokeStyle='#8a5a20';c.lineWidth=1;c.beginPath();c.ellipse(0,16,9,4,0,0,Math.PI);c.stroke();
-  if(type==='sausage'){c.fillStyle='#6a3a1a';c.beginPath();c.arc(0,7,2.5,0,Math.PI*2);c.fill();}
+  c.strokeStyle='#6a3a10';c.lineWidth=1;c.stroke();
+  // Cheese
+  const cheeseGrad=c.createLinearGradient(0,0,0,14);
+  cheeseGrad.addColorStop(0,'#fff0a0');
+  cheeseGrad.addColorStop(1,'#d8a020');
+  c.fillStyle=cheeseGrad;c.beginPath();c.moveTo(0,0);c.lineTo(-6,14);c.lineTo(6,14);c.closePath();c.fill();
+  // Crust arc (thick edge)
+  c.fillStyle='#daa540';c.beginPath();c.ellipse(0,16,9,4,0,0,Math.PI);c.fill();
+  c.strokeStyle='#6a3a10';c.lineWidth=1;c.beginPath();c.ellipse(0,16,9,4,0,0,Math.PI);c.stroke();
+  c.fillStyle='#e8b850';c.beginPath();c.ellipse(0,16,7,2,0,Math.PI,Math.PI*2);c.fill();
+  // Topping
+  if(type==='sausage'){
+    c.fillStyle='#4a2010';c.beginPath();c.arc(0,7,2.8,0,Math.PI*2);c.fill();
+    c.fillStyle='#7a3a1a';c.beginPath();c.arc(0,7,2.2,0,Math.PI*2);c.fill();
+    c.fillStyle='#a85a2a';c.beginPath();c.arc(-0.5,6.5,1.2,0,Math.PI*2);c.fill();
+  }else{
+    c.fillStyle='#2a7a2a';c.beginPath();c.ellipse(-1,8,1,0.5,0.3,0,Math.PI*2);c.fill();
+  }
+  c.restore();
+}
+
+// Heat steam wisps above fresh food
+function drawSteam(cx,cy,time,count){
+  c.save();
+  for(let i=0;i<count;i++){
+    const phase=time*0.0018+i*1.7;
+    const sway=Math.sin(phase)*4;
+    const rise=((time*0.06+i*50)%90);
+    const alpha=0.35*(1-rise/90);
+    c.strokeStyle=`rgba(240,240,240,${alpha})`;
+    c.lineWidth=2;
+    c.beginPath();
+    const baseX=cx+(i-count/2)*5;
+    for(let t=0;t<=1;t+=0.2){
+      const x=baseX+Math.sin(phase+t*3)*sway;
+      const y=cy-rise*t;
+      if(t===0)c.moveTo(x,y);else c.lineTo(x,y);
+    }
+    c.stroke();
+  }
   c.restore();
 }
 
 function drawCaesarSalad(cx,cy){
-  // Bowl
-  c.fillStyle='#8a6a30';c.beginPath();c.ellipse(cx,cy+6,22,14,0,0,Math.PI*2);c.fill();
-  c.fillStyle='#aa8040';c.beginPath();c.ellipse(cx,cy+4,20,12,0,0,Math.PI*2);c.fill();
-  c.strokeStyle='#6a4a20';c.lineWidth=1.5;c.beginPath();c.ellipse(cx,cy+6,22,14,0,0,Math.PI);c.stroke();
+  // Bowl shadow
+  c.fillStyle='rgba(0,0,0,0.3)';c.beginPath();c.ellipse(cx+2,cy+10,24,7,0,0,Math.PI*2);c.fill();
+  // Bowl with gradient
+  const bowlGrad=c.createLinearGradient(cx-22,cy,cx+22,cy+12);
+  bowlGrad.addColorStop(0,'#6a4a20');
+  bowlGrad.addColorStop(0.5,'#aa8040');
+  bowlGrad.addColorStop(1,'#5a3a18');
+  c.fillStyle=bowlGrad;c.beginPath();c.ellipse(cx,cy+6,22,14,0,0,Math.PI*2);c.fill();
+  // Bowl rim
+  c.fillStyle='#c89850';c.beginPath();c.ellipse(cx,cy+4,20,12,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#8a5a20';c.beginPath();c.ellipse(cx,cy+5,18,11,0,0,Math.PI*2);c.fill();
+  c.strokeStyle='#4a2a10';c.lineWidth=1.5;c.beginPath();c.ellipse(cx,cy+6,22,14,0,0,Math.PI);c.stroke();
   // Lettuce pile
   const greens=['#5a9a3a','#4a8a2a','#6aaa4a','#3a7a1a','#7aba5a'];
   for(let i=0;i<8;i++){
@@ -1093,16 +1319,17 @@ function drawCaesarSalad(cx,cy){
 
 function renderTableItems(){
   const boys=GameEngine.getBoys();
+  const t=performance.now();
   // Bro 2 plate + cheese pizza (left)
   drawPlate(144,TABLE_Y+42,24);
   if(boys[0].slices>0){
-    if(boys[0].slices>=3)drawPizzaWhole(144,TABLE_Y+40,18,'cheese');
+    if(boys[0].slices>=3){drawPizzaWhole(144,TABLE_Y+40,18,'cheese');drawSteam(144,TABLE_Y+20,t,3);}
     else for(let i=0;i<boys[0].slices;i++)drawPizzaSlice(130+i*14,TABLE_Y+34,i*0.4-0.2,'cheese');
   }
   // Bro 1 plate + sausage pizza (right)
   drawPlate(454,TABLE_Y+42,24);
   if(boys[1].slices>0){
-    if(boys[1].slices>=3)drawPizzaWhole(454,TABLE_Y+40,18,'sausage');
+    if(boys[1].slices>=3){drawPizzaWhole(454,TABLE_Y+40,18,'sausage');drawSteam(454,TABLE_Y+20,t,3);}
     else for(let i=0;i<boys[1].slices;i++)drawPizzaSlice(440+i*14,TABLE_Y+34,i*0.4-0.2,'sausage');
   }
   // Dad's caesar salad (center)
@@ -1148,6 +1375,11 @@ function drawStretchyArm(startX,startY,endX,endY,progress,blocked){
 }
 
 // ---- CANVAS-DRAWN CHARACTERS ----
+function drawCharShadow(cx,cy,w){
+  c.fillStyle='rgba(0,0,0,0.4)';
+  c.beginPath();c.ellipse(cx,cy,w,w*0.25,0,0,Math.PI*2);c.fill();
+}
+
 function drawDadChar(cx,cy,state,bobPhase,time){
   const bob=Math.sin(bobPhase)*2;
   cy+=bob;
@@ -1199,8 +1431,23 @@ function drawDadChar(cx,cy,state,bobPhase,time){
     c.fillStyle='#fff';c.beginPath();c.ellipse(cx-6,eyeY,4,4,0,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(cx+6,eyeY,4,4,0,0,Math.PI*2);c.fill();
     c.fillStyle='#1a1a1a';c.beginPath();c.arc(cx-6+lookX,eyeY,2,0,Math.PI*2);c.fill();c.beginPath();c.arc(cx+6+lookX,eyeY,2,0,Math.PI*2);c.fill();
   }
+  // Eyebrows (bushy, dad)
+  c.strokeStyle='#4a3a2a';c.lineWidth=2.5;c.lineCap='round';
+  if(state==='blocked'){
+    c.beginPath();c.moveTo(cx-10,eyeY-7);c.lineTo(cx-3,eyeY-4);c.stroke();
+    c.beginPath();c.moveTo(cx+3,eyeY-4);c.lineTo(cx+10,eyeY-7);c.stroke();
+  }else if(state==='reaching'||state==='eating'){
+    // Furrowed/determined
+    c.beginPath();c.moveTo(cx-10,eyeY-6);c.lineTo(cx-3,eyeY-3);c.stroke();
+    c.beginPath();c.moveTo(cx+3,eyeY-3);c.lineTo(cx+10,eyeY-6);c.stroke();
+  }else{
+    c.beginPath();c.moveTo(cx-10,eyeY-5);c.lineTo(cx-3,eyeY-5);c.stroke();
+    c.beginPath();c.moveTo(cx+3,eyeY-5);c.lineTo(cx+10,eyeY-5);c.stroke();
+  }
+  c.lineCap='butt';
   // Nose
   c.fillStyle='#b07030';c.beginPath();c.ellipse(cx,cy-6,3,4,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#c08040';c.beginPath();c.ellipse(cx-1,cy-7,1,1,0,0,Math.PI*2);c.fill();
   // Mouth/goatee
   c.fillStyle='#4a3a2a';c.beginPath();c.ellipse(cx,cy+1,5,3,0,0,Math.PI*2);c.fill();
   if(state==='eating'){
@@ -1223,6 +1470,8 @@ function drawDadChar(cx,cy,state,bobPhase,time){
 
 function drawBoyChar(cx,cy,name,state,bobPhase,indicator,time){
   const bob=Math.sin(bobPhase)*2;
+  // Ground shadow under boy
+  drawCharShadow(cx,cy+54,16);
   cy+=bob;
   const isParker=name==='Bro 2';
   const shirtDark=isParker?'#1a3a7a':'#7a1a1a';
@@ -1281,6 +1530,22 @@ function drawBoyChar(cx,cy,name,state,bobPhase,indicator,time){
     c.fillStyle='#fff';c.beginPath();c.ellipse(cx-5,eyeY,3.5,3.5,0,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(cx+5,eyeY,3.5,3.5,0,0,Math.PI*2);c.fill();
     c.fillStyle='#1a1a1a';c.beginPath();c.arc(cx-5+lookX,eyeY,1.8,0,Math.PI*2);c.fill();c.beginPath();c.arc(cx+5+lookX,eyeY,1.8,0,Math.PI*2);c.fill();
   }
+  // Eyebrows
+  c.strokeStyle=hairDark;c.lineWidth=2;c.lineCap='round';
+  if(state==='blocking'){
+    c.beginPath();c.moveTo(cx-8,eyeY-5);c.lineTo(cx-2,eyeY-3);c.stroke();
+    c.beginPath();c.moveTo(cx+2,eyeY-3);c.lineTo(cx+8,eyeY-5);c.stroke();
+  }else if(state==='distracted'){
+    c.beginPath();c.moveTo(cx-8,eyeY-5);c.lineTo(cx-2,eyeY-5);c.stroke();
+    c.beginPath();c.moveTo(cx+2,eyeY-5);c.lineTo(cx+8,eyeY-5);c.stroke();
+  }else if(state==='alert'){
+    c.beginPath();c.moveTo(cx-8,eyeY-6);c.lineTo(cx-2,eyeY-5);c.stroke();
+    c.beginPath();c.moveTo(cx+2,eyeY-5);c.lineTo(cx+8,eyeY-6);c.stroke();
+  }else{
+    c.beginPath();c.moveTo(cx-8,eyeY-4);c.lineTo(cx-2,eyeY-4);c.stroke();
+    c.beginPath();c.moveTo(cx+2,eyeY-4);c.lineTo(cx+8,eyeY-4);c.stroke();
+  }
+  c.lineCap='butt';
   // Nose
   c.fillStyle='#b07030';c.beginPath();c.ellipse(cx,cy-5,2,3,0,0,Math.PI*2);c.fill();
   // Mouth
@@ -1341,13 +1606,39 @@ function renderEffects(){
   const particles=GameEngine.getParticles(),popups=GameEngine.getPopups();
   for(const p of particles){
     c.globalAlpha=p.alpha;c.fillStyle=p.color||'#fff';
-    if(p.type==='star'){c.save();c.translate(p.x,p.y);c.rotate(p.rotation||0);const s=p.size/2;c.beginPath();c.moveTo(0,-s);c.lineTo(s/2,0);c.lineTo(0,s);c.lineTo(-s/2,0);c.closePath();c.fill();c.restore();}
+    if(p.type==='star'){
+      c.save();c.translate(p.x,p.y);c.rotate(p.rotation||0);
+      // Glow
+      c.globalAlpha=p.alpha*0.5;
+      c.shadowColor=p.color||'#FFD700';c.shadowBlur=8;
+      const s=p.size/2;
+      // 5-point star
+      c.beginPath();
+      for(let i=0;i<10;i++){
+        const r=(i%2===0)?s:s*0.4;
+        const a=i*Math.PI/5-Math.PI/2;
+        const x=Math.cos(a)*r,y=Math.sin(a)*r;
+        if(i===0)c.moveTo(x,y);else c.lineTo(x,y);
+      }
+      c.closePath();c.fill();
+      c.globalAlpha=p.alpha;c.shadowBlur=0;
+      c.restore();
+    }
     else if(p.type==='heart'){const s=p.size/3;c.beginPath();c.arc(p.x-s/2,p.y,s,0,Math.PI*2);c.arc(p.x+s/2,p.y,s,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(p.x-s*1.2,p.y+s*0.3);c.lineTo(p.x,p.y+s*2);c.lineTo(p.x+s*1.2,p.y+s*0.3);c.fill();}
     else c.fillRect(p.x,p.y,p.size,p.size);
   }
-  c.globalAlpha=1;
+  c.globalAlpha=1;c.shadowBlur=0;
   for(const p of popups){c.save();c.globalAlpha=p.alpha;c.font='bold '+Math.floor(p.size*p.scale)+'px monospace';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#000';c.fillText(p.text,p.x+2,p.y+2);c.fillStyle=p.color;c.fillText(p.text,p.x,p.y);c.restore();}
   c.globalAlpha=1;
+}
+
+function renderVignette(){
+  // Warm ambient tint + corner darkening for cinematic feel
+  const vGrad=c.createRadialGradient(W/2,H/2,150,W/2,H/2,480);
+  vGrad.addColorStop(0,'rgba(0,0,0,0)');
+  vGrad.addColorStop(0.7,'rgba(20,10,30,0.2)');
+  vGrad.addColorStop(1,'rgba(10,5,20,0.55)');
+  c.fillStyle=vGrad;c.fillRect(0,0,W,H);
 }
 
 function renderHUD(time){
@@ -1402,7 +1693,17 @@ function renderHUD(time){
 }
 
 function renderModeSelect(time){
-  c.fillStyle='#1a0a2e';c.fillRect(0,0,W,H);
+  // Gradient background
+  const bgGrad=c.createLinearGradient(0,0,0,H);
+  bgGrad.addColorStop(0,'#2a0a3e');
+  bgGrad.addColorStop(0.5,'#1a0a2e');
+  bgGrad.addColorStop(1,'#0a0520');
+  c.fillStyle=bgGrad;c.fillRect(0,0,W,H);
+  // Spotlight behind title
+  const spot=c.createRadialGradient(W/2,100,20,W/2,100,260);
+  spot.addColorStop(0,'rgba(255,200,80,0.25)');
+  spot.addColorStop(1,'rgba(255,200,80,0)');
+  c.fillStyle=spot;c.fillRect(0,0,W,200);
   // Decorative border
   for(let i=0;i<W;i+=16)for(let j=0;j<3;j++){c.fillStyle=((i/16+j)%2===0)?'#cc2222':'#ffffff';c.fillRect(i,j*16,16,16);c.fillRect(i,H-48+j*16,16,16);}
   for(let j=48;j<H-48;j+=16)for(let i=0;i<3;i++){c.fillStyle=((j/16+i)%2===0)?'#cc2222':'#ffffff';c.fillRect(i*16,j,16,16);c.fillRect(W-48+i*16,j,16,16);}
@@ -1438,7 +1739,17 @@ function renderModeSelect(time){
 }
 
 function renderTitle(time){
-  c.fillStyle='#1a0a2e';c.fillRect(0,0,W,H);
+  // Gradient background
+  const bgGrad=c.createLinearGradient(0,0,0,H);
+  bgGrad.addColorStop(0,'#2a0a3e');
+  bgGrad.addColorStop(0.5,'#1a0a2e');
+  bgGrad.addColorStop(1,'#0a0520');
+  c.fillStyle=bgGrad;c.fillRect(0,0,W,H);
+  // Spotlight behind title
+  const spot=c.createRadialGradient(W/2,100,20,W/2,100,260);
+  spot.addColorStop(0,'rgba(255,200,80,0.25)');
+  spot.addColorStop(1,'rgba(255,200,80,0)');
+  c.fillStyle=spot;c.fillRect(0,0,W,200);
   // Decorative border
   for(let i=0;i<W;i+=16)for(let j=0;j<3;j++){c.fillStyle=((i/16+j)%2===0)?'#cc2222':'#ffffff';c.fillRect(i,j*16,16,16);c.fillRect(i,H-48+j*16,16,16);}
   for(let j=48;j<H-48;j+=16)for(let i=0;i<3;i++){c.fillStyle=((j/16+i)%2===0)?'#cc2222':'#ffffff';c.fillRect(i*16,j,16,16);c.fillRect(W-48+i*16,j,16,16);}
@@ -1524,8 +1835,8 @@ function gameLoop(timestamp){
 
   if(state==='MODE_SELECT')renderModeSelect(timestamp);
   else if(state==='MENU')renderTitle(timestamp);
-  else if(state==='PLAYING'){renderBackground();renderTable();renderTableItems();renderCharacters(timestamp);renderEffects();renderHUD(timestamp);}
-  else if(state==='GAME_OVER'){renderBackground();renderTable();renderTableItems();renderCharacters(timestamp);renderEffects();renderHUD(timestamp);renderGameOver(timestamp);}
+  else if(state==='PLAYING'){renderBackground();renderTable();renderTableItems();renderCharacters(timestamp);renderEffects();renderVignette();renderHUD(timestamp);}
+  else if(state==='GAME_OVER'){renderBackground();renderTable();renderTableItems();renderCharacters(timestamp);renderEffects();renderVignette();renderHUD(timestamp);renderGameOver(timestamp);}
   requestAnimationFrame(gameLoop);
 }
 requestAnimationFrame(gameLoop);
