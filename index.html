@@ -514,11 +514,18 @@ function createBoy(name,side){
   return{name,side,state:"idle",slices:4,stamina:STAMINA_MAX,staminaExhausted:false,
     blockTimer:0,indicator:"",bobPhase:rngf(0,Math.PI*2),
     // AI state
-    aiState:"idle",aiTimer:0,blockCooldown:0,alertness:0.1,personality:name==="Bro 2"?"cautious":"aggressive"};
+    aiState:"idle",aiTimer:0,blockCooldown:0,alertness:0.1,personality:name==="Bro 2"?"cautious":"aggressive",
+    // Speech bubble
+    bubbleText:"",bubbleTimer:0};
 }
+
+const KID_REACTIONS_BLOCKED=["HEY!","NO DAD!","MINE!","NOPE!","STOP!","BACK OFF!"];
+const KID_REACTIONS_STEAL=["AW MAN...","NOT FAIR!","DAAAD!","HEY..."];
+function setBubble(boy,text){boy.bubbleText=text;boy.bubbleTimer=70;}
 
 function updateBoyPlayer(boy,isBlocking){
   boy.bobPhase+=0.05;
+  if(boy.bubbleTimer>0){boy.bubbleTimer--;if(boy.bubbleTimer<=0)boy.bubbleText="";}
   if(boy.staminaExhausted){
     boy.state="idle";boy.indicator="";
     boy.stamina=Math.min(STAMINA_MAX,boy.stamina+STAMINA_RECHARGE_RATE);
@@ -540,6 +547,7 @@ function updateBoyPlayer(boy,isBlocking){
 // ============================================================
 function updateBoyAI(boy, dad, frameCount) {
   boy.bobPhase += 0.05;
+  if (boy.bubbleTimer > 0) { boy.bubbleTimer--; if (boy.bubbleTimer <= 0) boy.bubbleText = ""; }
 
   // Stamina recovery when exhausted
   if (boy.staminaExhausted) {
@@ -662,13 +670,20 @@ function updateDad(dad,input,boys,particles,popups,taxMeter,audioCallback,gameMo
           dad.state="blocked";dad.stateTimer=DAD_BLOCKED_FRAMES;dad.reachProgress=1;audioCallback("blocked");
           const px=dad.target==="left"?240:560;for(let i=0;i<6;i++)particles.push(createParticle(px,200,"star"));
           popups.push(createPopup(px,160,"BLOCKED!","#FF4444",28));
+          GameEngine.triggerShake(14);
+          GameEngine.resetCombo();
+          setBubble(targetBoy,KID_REACTIONS_BLOCKED[rng(0,KID_REACTIONS_BLOCKED.length-1)]);
         }else if(targetBoy.slices<=0){
           dad.state="blocked";dad.stateTimer=DAD_BLOCKED_FRAMES;popups.push(createPopup(dad.target==="left"?240:560,160,"NO PIZZA!","#888",22));audioCallback("blocked");
+          GameEngine.triggerShake(6);
         }else{
           targetBoy.slices--;const sliceType=dad.target==="left"?"cheese":"sausage";taxMeter.total++;taxMeter.slices.push(sliceType);
           dad.state="eating";dad.stateTimer=DAD_EAT_FRAMES;dad.reachProgress=1;audioCallback("grab");setTimeout(()=>audioCallback("eat"),300);
           const px=dad.target==="left"?280:520;for(let i=0;i<8;i++)particles.push(createParticle(px,240,"crumb"));
           const label=sliceType==="cheese"?"CHEESE!":"SAUSAGE!";popups.push(createPopup(400,140,"DAD TAX!","#FFD700",32));popups.push(createPopup(px,200,label,"#FFA500",22));
+          GameEngine.triggerShake(8);
+          GameEngine.addCombo();
+          setBubble(targetBoy,KID_REACTIONS_STEAL[rng(0,KID_REACTIONS_STEAL.length-1)]);
           // Increase AI alertness on steal (capped so it stays beatable)
           if(gameMode==="1P"){
             targetBoy.alertness=Math.min(0.7,targetBoy.alertness+0.05);
@@ -686,16 +701,26 @@ function startReach(dad,target){dad.state="reaching";dad.target=target;dad.state
 
 const GameEngine=(function(){
   let gameState="MODE_SELECT",gameMode="1P",timer=GAME_TIME,dad,boys,particles,popups,taxMeter,inputState,boyInputState,frameCount,lastRating,gameOverReason;
+  let screenShake=0,combo=0,comboTimer=0,bestCombo=0,muted=false;
 
   function init(){
     dad=createDad();boys=[createBoy("Bro 2","left"),createBoy("Bro 1","right")];particles=[];popups=[];taxMeter={total:0,slices:[]};inputState={left:false,right:false};boyInputState={parkerBlocking:false,brennanBlocking:false};frameCount=0;timer=GAME_TIME;lastRating="";gameOverReason="";gameState="MODE_SELECT";
+    screenShake=0;combo=0;comboTimer=0;bestCombo=0;
   }
   function setMode(mode){gameMode=mode;}
   function getMode(){return gameMode;}
 
   function startGame(){
-    dad=createDad();boys=[createBoy("Bro 2","left"),createBoy("Bro 1","right")];particles=[];popups=[];taxMeter={total:0,slices:[]};inputState={left:false,right:false};boyInputState={parkerBlocking:false,brennanBlocking:false};frameCount=0;timer=GAME_TIME;lastRating="";gameOverReason="";gameState="PLAYING";AudioEngine.playMusic();
+    dad=createDad();boys=[createBoy("Bro 2","left"),createBoy("Bro 1","right")];particles=[];popups=[];taxMeter={total:0,slices:[]};inputState={left:false,right:false};boyInputState={parkerBlocking:false,brennanBlocking:false};frameCount=0;timer=GAME_TIME;lastRating="";gameOverReason="";gameState="PLAYING";
+    screenShake=0;combo=0;comboTimer=0;bestCombo=0;
+    if(!muted)AudioEngine.playMusic();
   }
+
+  function triggerShake(amount){screenShake=Math.max(screenShake,amount);}
+  function addCombo(){combo++;comboTimer=180;if(combo>bestCombo)bestCombo=combo;}
+  function resetCombo(){combo=0;comboTimer=0;}
+  function toggleMute(){muted=!muted;if(muted)AudioEngine.stopMusic();else if(gameState==="PLAYING")AudioEngine.playMusic();return muted;}
+  function isMuted(){return muted;}
 
   function handleInput(keys,mouse,parkerBlock,brennanBlock){
     if(gameState==="PLAYING"){
@@ -714,9 +739,11 @@ const GameEngine=(function(){
 
   function update(dt){
     if(gameState!=="PLAYING")return;frameCount++;timer-=dt;
+    if(screenShake>0)screenShake=Math.max(0,screenShake-0.8);
+    if(comboTimer>0){comboTimer--;if(comboTimer<=0)combo=0;}
     if(timer<=0){timer=0;endGame("time");return;}
     if(taxMeter.total>=TOTAL_SLICES){endGame("allEaten");return;}
-    const audioFn=type=>AudioEngine.playSFX(type);
+    const audioFn=type=>{if(!muted)AudioEngine.playSFX(type);};
     updateDad(dad,inputState,boys,particles,popups,taxMeter,audioFn,gameMode);
     inputState.left=false;inputState.right=false;
 
@@ -732,9 +759,9 @@ const GameEngine=(function(){
     particles=particles.filter(updateParticle);popups=popups.filter(updatePopup);
   }
 
-  function endGame(reason){gameState="GAME_OVER";gameOverReason=reason;lastRating=getRating(taxMeter.total);AudioEngine.stopMusic();if(taxMeter.total>=6)AudioEngine.playSFX("victory");else AudioEngine.playSFX("game_over");}
+  function endGame(reason){gameState="GAME_OVER";gameOverReason=reason;lastRating=getRating(taxMeter.total);AudioEngine.stopMusic();if(!muted){if(taxMeter.total>=6)AudioEngine.playSFX("victory");else AudioEngine.playSFX("game_over");}}
   function getRating(count){for(const r of RATINGS)if(count>=r.min&&count<=r.max)return r.label;return"";}
-  return{init,update,handleInput,setMode,getMode,getState:()=>gameState,setState:(s)=>{gameState=s;},getDad:()=>dad,getBoys:()=>boys,getParticles:()=>particles,getPopups:()=>popups,getTimer:()=>timer,getTaxMeter:()=>taxMeter,getTaxSlices:()=>taxMeter?taxMeter.slices:[],getRatingLabel:()=>lastRating,getGameOverReason:()=>gameOverReason,startGame,resetGame:()=>{AudioEngine.stopMusic();init();}};
+  return{init,update,handleInput,setMode,getMode,getState:()=>gameState,setState:(s)=>{gameState=s;},getDad:()=>dad,getBoys:()=>boys,getParticles:()=>particles,getPopups:()=>popups,getTimer:()=>timer,getTaxMeter:()=>taxMeter,getTaxSlices:()=>taxMeter?taxMeter.slices:[],getRatingLabel:()=>lastRating,getGameOverReason:()=>gameOverReason,startGame,resetGame:()=>{AudioEngine.stopMusic();init();},triggerShake,addCombo,resetCombo,getShake:()=>screenShake,getCombo:()=>combo,getBestCombo:()=>bestCombo,toggleMute,isMuted};
 })();
 
 const AudioEngine=(function(){
@@ -830,12 +857,15 @@ const BTN_RIGHT={x:400,y:434,w:200,h:40};
 const BTN_START={x:190,y:340,w:260,h:48};
 const BTN_1P={x:120,y:260,w:170,h:50};
 const BTN_3P={x:350,y:260,w:170,h:50};
+const BTN_MUTE={x:120,y:6,w:30,h:30};
 function hitTest(pos,btn){return pos.x>=btn.x&&pos.x<=btn.x+btn.w&&pos.y>=btn.y&&pos.y<=btn.y+btn.h;}
 
 canvas.addEventListener('mousedown',e=>{
   ensureAudio();
   const pos=getLogicalPos(e.clientX,e.clientY);
   const state=GameEngine.getState();
+  // Mute button works in all states
+  if(hitTest(pos,BTN_MUTE)){GameEngine.toggleMute();return;}
   if(state==="MODE_SELECT"){
     if(hitTest(pos,BTN_1P)){GameEngine.setMode("1P");GameEngine.setState("MENU");}
     else if(hitTest(pos,BTN_3P)){GameEngine.setMode("3P");GameEngine.setState("MENU");}
@@ -856,6 +886,7 @@ canvas.addEventListener('touchstart',e=>{
   for(const t of e.changedTouches){
     const pos=getLogicalPos(t.clientX,t.clientY);
     const state=GameEngine.getState();
+    if(hitTest(pos,BTN_MUTE)){GameEngine.toggleMute();continue;}
     if(state==="MODE_SELECT"){
       if(hitTest(pos,BTN_1P)){GameEngine.setMode("1P");GameEngine.setState("MENU");}
       else if(hitTest(pos,BTN_3P)){GameEngine.setMode("3P");GameEngine.setState("MENU");}
@@ -1029,17 +1060,75 @@ function renderBackground(){
   c.fillStyle='#ffffff';c.fillRect(fx+17,fy+3,15,34);
   c.fillStyle='#ce2b37';c.fillRect(fx+32,fy+3,15,34);
 
-  // Kitchen counter / order window (far right)
-  c.fillStyle='#555';c.fillRect(580,TABLE_Y-80,60,50);
-  c.fillStyle='#666';c.fillRect(583,TABLE_Y-77,54,44);
-  c.strokeStyle='#444';c.lineWidth=2;c.strokeRect(580,TABLE_Y-80,60,50);
-  // Heat lamp glow
-  c.fillStyle='#ff8800';c.beginPath();c.arc(610,TABLE_Y-78,3,0,Math.PI*2);c.fill();
-  c.fillStyle='rgba(255,136,0,0.1)';c.beginPath();c.moveTo(604,TABLE_Y-75);c.lineTo(616,TABLE_Y-75);c.lineTo(620,TABLE_Y-40);c.lineTo(600,TABLE_Y-40);c.closePath();c.fill();
-  // "ORDER HERE" sign
-  c.fillStyle='#ddd';c.fillRect(582,TABLE_Y-95,56,14);
-  c.fillStyle='#cc2222';c.font='bold 8px monospace';c.textAlign='center';
-  c.fillText('ORDER HERE',610,TABLE_Y-85);
+  // Brick pizza oven (far right)
+  const ovX=576,ovY=TABLE_Y-90,ovW=64,ovH=60;
+  // Brick facade
+  c.fillStyle='#5a2818';c.fillRect(ovX,ovY,ovW,ovH);
+  // Brick pattern
+  for(let br=0;br<6;br++){
+    const by=ovY+br*10;
+    const off=(br%2)*8;
+    for(let bc=0;bc<5;bc++){
+      const bx=ovX+bc*14-off;
+      if(bx>ovX+ovW-2)continue;
+      const brW=Math.min(12,ovX+ovW-bx-1);
+      if(brW<=0)continue;
+      c.fillStyle=(bc+br)%2?'#7a3820':'#8a4828';
+      c.fillRect(Math.max(ovX+1,bx+1),by+1,brW,8);
+      c.fillStyle='#3a1808';
+      c.fillRect(Math.max(ovX+1,bx+1),by,brW,1);
+    }
+  }
+  // Top arch lip
+  c.fillStyle='#3a1808';c.fillRect(ovX-3,ovY-4,ovW+6,4);
+  c.fillStyle='#6a2818';c.fillRect(ovX-2,ovY-3,ovW+4,2);
+  // Oven mouth (arched opening with glowing fire)
+  const mouthX=ovX+ovW/2,mouthY=ovY+ovH/2+6;
+  c.fillStyle='#0a0000';
+  c.beginPath();c.ellipse(mouthX,mouthY,22,16,0,Math.PI,Math.PI*2);c.fill();
+  c.fillRect(mouthX-22,mouthY,44,10);
+  // Fire glow inside oven
+  const flicker=0.85+Math.sin(performance.now()*0.02)*0.15;
+  const fireGrad=c.createRadialGradient(mouthX,mouthY+4,2,mouthX,mouthY+4,24);
+  fireGrad.addColorStop(0,`rgba(255,240,120,${flicker})`);
+  fireGrad.addColorStop(0.4,`rgba(255,140,20,${flicker*0.85})`);
+  fireGrad.addColorStop(0.9,'rgba(180,30,10,0.5)');
+  fireGrad.addColorStop(1,'rgba(60,10,5,0)');
+  c.fillStyle=fireGrad;
+  c.beginPath();c.ellipse(mouthX,mouthY+4,22,14,0,Math.PI,Math.PI*2);c.fill();
+  c.fillRect(mouthX-22,mouthY+4,44,8);
+  // Flames inside
+  for(let fi=0;fi<3;fi++){
+    const fx=mouthX-10+fi*10;
+    const fh=4+Math.sin(performance.now()*0.015+fi*2)*2;
+    c.fillStyle='#ff8822';c.beginPath();c.ellipse(fx,mouthY+10-fh/2,3,fh,0,0,Math.PI*2);c.fill();
+    c.fillStyle='#ffcc44';c.beginPath();c.ellipse(fx,mouthY+10-fh/2,1.5,fh*0.7,0,0,Math.PI*2);c.fill();
+  }
+  // Pizza in the oven
+  c.fillStyle='#c8942a';c.beginPath();c.ellipse(mouthX,mouthY+8,8,3,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#f0c040';c.beginPath();c.ellipse(mouthX,mouthY+7,6,2,0,0,Math.PI*2);c.fill();
+  // Oven rim
+  c.strokeStyle='#1a0a00';c.lineWidth=2;
+  c.beginPath();c.ellipse(mouthX,mouthY,22,16,0,Math.PI,Math.PI*2);
+  c.lineTo(mouthX-22,mouthY+10);c.lineTo(mouthX+22,mouthY+10);c.stroke();
+  // Glow cast outward from oven
+  const outGlow=c.createRadialGradient(mouthX,mouthY+6,4,mouthX,mouthY+6,50);
+  outGlow.addColorStop(0,'rgba(255,160,60,0.35)');
+  outGlow.addColorStop(1,'rgba(255,160,60,0)');
+  c.fillStyle=outGlow;c.fillRect(ovX-20,ovY-10,ovW+40,ovH+30);
+  // Wispy smoke from top of oven
+  for(let sp=0;sp<3;sp++){
+    const t=(performance.now()*0.0004+sp*0.33)%1;
+    const sy=ovY-5-t*35;
+    const sR=2+t*4;
+    c.fillStyle=`rgba(220,220,220,${(1-t)*0.3})`;
+    c.beginPath();c.arc(ovX+ovW/2+Math.sin(t*6)*4,sy,sR,0,Math.PI*2);c.fill();
+  }
+  // "PIZZA OVEN" stone plaque
+  c.fillStyle='#d8c89c';c.fillRect(ovX+4,ovY+4,56,8);
+  c.strokeStyle='#6a4020';c.lineWidth=1;c.strokeRect(ovX+4,ovY+4,56,8);
+  c.fillStyle='#4a2808';c.font='bold 6px monospace';c.textAlign='center';
+  c.fillText("TONY'S OVEN",ovX+32,ovY+10);
 
   // Menu board (on wall behind counter)
   c.fillStyle='#2a2a2a';c.fillRect(580,fy,56,55);
@@ -1123,6 +1212,16 @@ function renderBackground(){
     coneGrad.addColorStop(0,'rgba(255,220,150,0.28)');
     coneGrad.addColorStop(1,'rgba(255,220,150,0)');
     c.fillStyle=coneGrad;c.beginPath();c.moveTo(lx-8,46);c.lineTo(lx+8,46);c.lineTo(lx+38,TABLE_Y-30);c.lineTo(lx-38,TABLE_Y-30);c.closePath();c.fill();
+    // Dust motes floating in light cone
+    for(let dm=0;dm<8;dm++){
+      const dt=(performance.now()*0.00015+dm*0.13)%1;
+      const dy=46+dt*(TABLE_Y-76);
+      const spread=8+dt*30;
+      const dx=lx+Math.sin(dt*12+dm)*spread;
+      const bright=0.3+Math.sin(performance.now()*0.004+dm*2)*0.3;
+      c.fillStyle=`rgba(255,220,160,${bright*(1-dt*0.5)})`;
+      c.fillRect(dx,dy,1.5,1.5);
+    }
   }
 
   // Potted plant (right side floor)
@@ -1429,6 +1528,64 @@ function renderTable(){
   c.fillStyle='#2a2a2a';c.fillRect(280,TABLE_Y+14,8,14);c.fillStyle='#444';c.fillRect(280,TABLE_Y+12,8,4);
   // Red pepper flake shaker
   c.fillStyle='#cc3333';c.fillRect(256,TABLE_Y+16,7,12);c.fillStyle='#aa2222';c.fillRect(256,TABLE_Y+14,7,4);
+
+  // Bread basket (between left plate and salt shakers)
+  const bbX=200,bbY=TABLE_Y+46;
+  // Basket shadow
+  c.fillStyle='rgba(0,0,0,0.3)';c.beginPath();c.ellipse(bbX+2,bbY+10,22,4,0,0,Math.PI*2);c.fill();
+  // Basket weave
+  c.fillStyle='#6a3810';
+  c.beginPath();c.ellipse(bbX,bbY+8,20,6,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#8a4818';
+  c.beginPath();c.ellipse(bbX,bbY+6,19,5,0,0,Math.PI*2);c.fill();
+  // Basket weave pattern
+  c.strokeStyle='#4a2408';c.lineWidth=0.8;
+  for(let bv=-16;bv<=16;bv+=3){c.beginPath();c.moveTo(bbX+bv,bbY+2);c.lineTo(bbX+bv,bbY+10);c.stroke();}
+  c.beginPath();c.moveTo(bbX-18,bbY+5);c.lineTo(bbX+18,bbY+5);c.stroke();
+  c.beginPath();c.moveTo(bbX-18,bbY+8);c.lineTo(bbX+18,bbY+8);c.stroke();
+  // Red/white checkered napkin lining
+  c.fillStyle='#cc2222';c.beginPath();c.ellipse(bbX,bbY+3,17,4,0,Math.PI,Math.PI*2);c.fill();
+  c.fillStyle='#fff';
+  for(let nx=-14;nx<14;nx+=4){c.fillRect(bbX+nx,bbY-1,2,5);}
+  // Breadsticks sticking out
+  const sticks=[[-8,-6,-0.3],[-3,-8,0.1],[3,-7,-0.15],[8,-5,0.25],[0,-9,0.0]];
+  for(const[sx,sy,rot] of sticks){
+    c.save();c.translate(bbX+sx,bbY+sy);c.rotate(rot);
+    // Stick body
+    c.fillStyle='#c8a068';c.fillRect(-1.5,-2,3,14);
+    c.fillStyle='#e0b878';c.fillRect(-1.5,-2,1,14);
+    // Sesame seeds
+    c.fillStyle='#f0e0a0';
+    c.fillRect(-1,0,1,1);c.fillRect(0,3,1,1);c.fillRect(-1,6,1,1);
+    // Toasted tip
+    c.fillStyle='#8a6030';c.fillRect(-1.5,-3,3,2);
+    c.restore();
+  }
+
+  // Water glass - Bro 2 side (upper-left of left plate)
+  const wg1X=104,wg1Y=TABLE_Y+30;
+  c.fillStyle='rgba(0,0,0,0.25)';c.beginPath();c.ellipse(wg1X,wg1Y+11,6,1.5,0,0,Math.PI*2);c.fill();
+  c.fillStyle='rgba(180,220,240,0.35)';c.fillRect(wg1X-5,wg1Y-8,10,16);
+  c.fillStyle='rgba(100,180,220,0.55)';c.fillRect(wg1X-5,wg1Y-4,10,12);
+  c.strokeStyle='rgba(255,255,255,0.7)';c.lineWidth=1;c.strokeRect(wg1X-5,wg1Y-8,10,16);
+  // Ice cubes
+  c.fillStyle='rgba(255,255,255,0.8)';c.fillRect(wg1X-3,wg1Y-2,3,3);c.fillRect(wg1X+1,wg1Y,2,2);
+  // Shine
+  c.fillStyle='rgba(255,255,255,0.9)';c.fillRect(wg1X-4,wg1Y-7,1,10);
+  // Straw
+  c.strokeStyle='#cc2222';c.lineWidth=2;c.beginPath();c.moveTo(wg1X+3,wg1Y-12);c.lineTo(wg1X+2,wg1Y+4);c.stroke();
+  c.strokeStyle='#ffffff';c.lineWidth=0.8;c.beginPath();c.moveTo(wg1X+3,wg1Y-11);c.lineTo(wg1X+3,wg1Y-8);c.stroke();
+
+  // Water glass - Bro 1 side (upper-right of right plate)
+  const wg2X=496,wg2Y=TABLE_Y+30;
+  c.fillStyle='rgba(0,0,0,0.25)';c.beginPath();c.ellipse(wg2X,wg2Y+11,6,1.5,0,0,Math.PI*2);c.fill();
+  c.fillStyle='rgba(180,220,240,0.35)';c.fillRect(wg2X-5,wg2Y-8,10,16);
+  c.fillStyle='rgba(100,180,220,0.55)';c.fillRect(wg2X-5,wg2Y-4,10,12);
+  c.strokeStyle='rgba(255,255,255,0.7)';c.lineWidth=1;c.strokeRect(wg2X-5,wg2Y-8,10,16);
+  c.fillStyle='rgba(255,255,255,0.8)';c.fillRect(wg2X-3,wg2Y-2,3,3);c.fillRect(wg2X+1,wg2Y,2,2);
+  c.fillStyle='rgba(255,255,255,0.9)';c.fillRect(wg2X-4,wg2Y-7,1,10);
+  c.strokeStyle='#2a5aaa';c.lineWidth=2;c.beginPath();c.moveTo(wg2X+3,wg2Y-12);c.lineTo(wg2X+2,wg2Y+4);c.stroke();
+  c.strokeStyle='#ffffff';c.lineWidth=0.8;c.beginPath();c.moveTo(wg2X+3,wg2Y-11);c.lineTo(wg2X+3,wg2Y-8);c.stroke();
 
   // Wine bottle (right of napkin dispenser, left of Bro 1 plate)
   const wbX=405,wbY=TABLE_Y+12;
@@ -2029,11 +2186,44 @@ function renderCharacters(time){
   const pk=boys[0],pkCX=132,pkCY=FLOOR_Y+6+Math.sin(pk.bobPhase)*2;
   let pkState=pk.state==='eating_own'?'eating':pk.state;
   drawBoyChar(pkCX,pkCY,'Bro 2',pkState,pk.bobPhase,pk.indicator,time);
+  if(pk.bubbleText)drawSpeechBubble(pkCX+24,pkCY-30,pk.bubbleText,pk.bubbleTimer);
 
   // Bro 1 (right-bottom)
   const br=boys[1],brCX=492,brCY=FLOOR_Y+4+Math.sin(br.bobPhase)*2;
   let brState=br.state==='eating_own'?'eating':br.state;
   drawBoyChar(brCX,brCY,'Bro 1',brState,br.bobPhase,br.indicator,time);
+  if(br.bubbleText)drawSpeechBubble(brCX-24,brCY-30,br.bubbleText,br.bubbleTimer,true);
+}
+
+function drawSpeechBubble(x,y,text,timer,flip){
+  const age=70-timer;
+  const scale=age<8?age/8:(timer<15?Math.max(0,timer/15):1);
+  if(scale<=0)return;
+  c.save();c.translate(x,y);c.scale(scale,scale);
+  c.font='bold 11px monospace';
+  const tw=c.measureText(text).width;
+  const w=tw+14,h=18;
+  const bx=flip?-w+10:-10;
+  // Shadow
+  c.fillStyle='rgba(0,0,0,0.35)';
+  roundRect(bx+2,-h/2+2,w,h,6);c.fill();
+  // Bubble
+  c.fillStyle='#fff';
+  roundRect(bx,-h/2,w,h,6);c.fill();
+  c.strokeStyle='#1a1a1a';c.lineWidth=1.5;c.stroke();
+  // Tail
+  c.fillStyle='#fff';
+  c.beginPath();
+  if(flip){c.moveTo(bx+w-8,h/2);c.lineTo(bx+w-2,h/2+6);c.lineTo(bx+w-12,h/2);}
+  else{c.moveTo(bx+8,h/2);c.lineTo(bx+2,h/2+6);c.lineTo(bx+12,h/2);}
+  c.closePath();c.fill();c.strokeStyle='#1a1a1a';c.stroke();
+  // Tail fix (whiten overlap)
+  c.fillStyle='#fff';
+  if(flip)c.fillRect(bx+w-12,h/2-1,10,2);else c.fillRect(bx+8,h/2-1,6,2);
+  // Text
+  c.fillStyle='#1a1a1a';c.textAlign='center';c.textBaseline='middle';
+  c.fillText(text,bx+w/2,0);
+  c.restore();
 }
 
 function renderEffects(){
@@ -2109,6 +2299,38 @@ function renderHUD(time){
   roundRect(W/2-38,2,76,16,6);c.fill();
   c.strokeStyle='#44ffaa';c.lineWidth=1.2;c.stroke();
   drawTextShadow(mode==='1P'?'1 PLAYER':'3 PLAYER',W/2,5,'#44ffaa','#003322',11,'center');
+
+  // Combo display (below mode indicator, only when active)
+  const combo=GameEngine.getCombo();
+  if(combo>=2){
+    const pulse=1+Math.sin(time*0.015)*0.08;
+    c.save();c.translate(W/2,36);c.scale(pulse,pulse);
+    c.fillStyle='rgba(40,0,40,0.75)';
+    roundRect(-60,-14,120,28,10);c.fill();
+    c.strokeStyle='#ff44ff';c.lineWidth=2;c.stroke();
+    drawTextShadow('x'+combo+' COMBO!',0,-10,'#ffccff','#4a004a',18,'center');
+    c.restore();
+  }
+
+  // Mute toggle button (top-right of timer)
+  const muted=GameEngine.isMuted();
+  c.fillStyle='rgba(0,0,0,0.6)';
+  roundRect(120,6,30,30,6);c.fill();
+  c.strokeStyle=muted?'#888':'#FFD700';c.lineWidth=2;c.stroke();
+  // Speaker icon
+  c.fillStyle=muted?'#888':'#FFD700';
+  c.beginPath();c.moveTo(127,18);c.lineTo(131,18);c.lineTo(136,14);c.lineTo(136,28);c.lineTo(131,24);c.lineTo(127,24);c.closePath();c.fill();
+  if(muted){
+    c.strokeStyle='#ff4444';c.lineWidth=2;c.lineCap='round';
+    c.beginPath();c.moveTo(139,14);c.lineTo(147,26);c.stroke();
+    c.beginPath();c.moveTo(147,14);c.lineTo(139,26);c.stroke();
+    c.lineCap='butt';
+  }else{
+    // Sound waves
+    c.strokeStyle='#FFD700';c.lineWidth=1.5;
+    c.beginPath();c.arc(136,21,5,-0.6,0.6);c.stroke();
+    c.beginPath();c.arc(136,21,8,-0.5,0.5);c.stroke();
+  }
 
   // Tax meter panel (right side)
   c.fillStyle='rgba(0,0,0,0.65)';
@@ -2332,29 +2554,97 @@ function renderTitle(time){
   drawTextShadow('Dad gets a sad salad... time to collect the DAD TAX!',W/2,440,'#FFD700','#000',11,'center');
 }
 
-function renderGameOver(time){
-  c.fillStyle='rgba(0,0,0,0.7)';c.fillRect(0,0,W,H);
-  drawTextShadow('DINNER IS',W/2,60,'#FF6600','#000',32,'center');
-  drawTextShadow('OVER!',W/2,100,'#FF6600','#000',32,'center');
-  const tm=GameEngine.getTaxMeter(),ch=tm.slices.filter(s=>s==='cheese').length,sa=tm.slices.filter(s=>s==='sausage').length;
-
-  c.fillStyle='rgba(0,0,0,0.4)';c.fillRect(120,145,400,130);
-  c.strokeStyle='#FFD700';c.lineWidth=2;c.strokeRect(120,145,400,130);
-
-  drawTextShadow('Dad taxed: '+tm.total+'/'+TOTAL_SLICES+' slices',W/2,155,'#fff','#000',18,'center');
-  drawTextShadow('Bro 2 lost: '+ch+' cheese slices',W/2,185,'#4a7acc','#000',16,'center');
-  drawTextShadow('Bro 1 lost: '+sa+' sausage slices',W/2,210,'#cc4a4a','#000',16,'center');
-  drawTextShadow('Rating:',W/2,245,'#aaa','#000',16,'center');
-
-  drawTextShadow(GameEngine.getRatingLabel(),W/2,275,'#FFD700','#000',28,'center');
-
-  if(Math.floor(time/500)%2===0){
-    c.fillStyle=hoverBtn==='start'?'#44aa44':'#228822';
-    c.fillRect(BTN_START.x,BTN_START.y,BTN_START.w,BTN_START.h);
-    c.strokeStyle='#66cc66';c.lineWidth=2;c.strokeRect(BTN_START.x,BTN_START.y,BTN_START.w,BTN_START.h);
-    drawTextShadow('PLAY AGAIN',W/2,BTN_START.y+14,'#fff','#000',20,'center');
+function drawStar(cx,cy,r,fill,stroke){
+  c.beginPath();
+  for(let i=0;i<10;i++){
+    const rr=(i%2===0)?r:r*0.4;
+    const a=i*Math.PI/5-Math.PI/2;
+    const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;
+    if(i===0)c.moveTo(x,y);else c.lineTo(x,y);
   }
+  c.closePath();
+  if(fill){c.fillStyle=fill;c.fill();}
+  if(stroke){c.strokeStyle=stroke;c.lineWidth=2;c.stroke();}
 }
+
+function renderGameOver(time){
+  // Darkened overlay
+  c.fillStyle='rgba(0,0,0,0.75)';c.fillRect(0,0,W,H);
+  // Spotlight
+  const spot=c.createRadialGradient(W/2,H/2,30,W/2,H/2,400);
+  spot.addColorStop(0,'rgba(255,215,0,0.18)');
+  spot.addColorStop(1,'rgba(255,215,0,0)');
+  c.fillStyle=spot;c.fillRect(0,0,W,H);
+
+  const tm=GameEngine.getTaxMeter(),ch=tm.slices.filter(s=>s==='cheese').length,sa=tm.slices.filter(s=>s==='sausage').length;
+  const bestCombo=GameEngine.getBestCombo();
+
+  // Big title
+  const bob=Math.sin(time*0.004)*4;
+  drawTextShadow('DINNER IS',W/2,30+bob,'#FF6600','#000',32,'center');
+  drawTextShadow('OVER!',W/2,72+bob,'#FF6600','#000',32,'center');
+
+  // Results panel
+  c.fillStyle='rgba(20,10,30,0.7)';
+  roundRect(100,120,440,220,12);c.fill();
+  c.strokeStyle='#FFD700';c.lineWidth=3;c.stroke();
+  c.strokeStyle='rgba(255,215,0,0.4)';c.lineWidth=1;
+  roundRect(104,124,432,212,10);c.stroke();
+
+  // Star rating (out of 5) based on total
+  const starCount=Math.min(5,Math.floor(tm.total/1.6));
+  const starY=155;
+  for(let s=0;s<5;s++){
+    const sx=W/2-100+s*50;
+    // Empty star
+    drawStar(sx,starY,16,'rgba(80,60,20,0.6)','#aa8800');
+    // Fill animated - stars appear one by one
+    const appearAt=s*250+400;
+    if(time-gameOverStart>appearAt&&s<starCount){
+      const pulse=1+Math.sin(time*0.008+s)*0.12;
+      c.save();c.translate(sx,starY);c.scale(pulse,pulse);
+      c.shadowColor='#ffcc00';c.shadowBlur=12;
+      drawStar(0,0,16,'#FFD700','#8a5a00');
+      c.shadowBlur=0;
+      c.restore();
+    }
+  }
+
+  drawTextShadow('Dad taxed: '+tm.total+'/'+TOTAL_SLICES+' slices',W/2,190,'#fff','#000',18,'center');
+  drawTextShadow('Bro 2 lost: '+ch+' cheese slices',W/2,216,'#4a7acc','#000',14,'center');
+  drawTextShadow('Bro 1 lost: '+sa+' sausage slices',W/2,236,'#cc4a4a','#000',14,'center');
+  if(bestCombo>=2)drawTextShadow('Best combo: x'+bestCombo,W/2,256,'#ff88ff','#2a002a',14,'center');
+
+  drawTextShadow(GameEngine.getRatingLabel(),W/2,290,'#FFD700','#4a2a00',26,'center');
+
+  // Confetti particles for big wins
+  if(tm.total>=6){
+    for(let cf=0;cf<30;cf++){
+      const ct=((time*0.001+cf*0.2)%3);
+      const cx1=(cf*37+17)%W;
+      const cy1=(ct*H)%H;
+      const hue=(cf*43)%360;
+      c.fillStyle=`hsl(${hue},90%,60%)`;
+      c.fillRect(cx1,cy1,4,6);
+    }
+  }
+
+  // Play again button with pulse
+  const pulse=1+Math.sin(time*0.008)*0.05;
+  c.save();c.translate(BTN_START.x+BTN_START.w/2,BTN_START.y+BTN_START.h/2);c.scale(pulse,pulse);
+  const pgGrad=c.createLinearGradient(0,-BTN_START.h/2,0,BTN_START.h/2);
+  pgGrad.addColorStop(0,'#44cc44');
+  pgGrad.addColorStop(1,'#226622');
+  c.fillStyle=pgGrad;
+  roundRect(-BTN_START.w/2,-BTN_START.h/2,BTN_START.w,BTN_START.h,12);c.fill();
+  c.strokeStyle='#88ff88';c.lineWidth=3;c.stroke();
+  c.strokeStyle='rgba(255,255,255,0.5)';c.lineWidth=1;
+  roundRect(-BTN_START.w/2+3,-BTN_START.h/2+3,BTN_START.w-6,BTN_START.h-6,9);c.stroke();
+  drawTextShadow('PLAY AGAIN',0,-10,'#fff','#000',22,'center');
+  c.restore();
+}
+let gameOverStart=0;
+let lastRenderState='';
 
 let lastTime=0;
 function gameLoop(timestamp){
@@ -2371,8 +2661,19 @@ function gameLoop(timestamp){
 
   if(state==='MODE_SELECT')renderModeSelect(timestamp);
   else if(state==='MENU')renderTitle(timestamp);
-  else if(state==='PLAYING'){renderBackground();renderTable();renderTableItems();renderCharacters(timestamp);renderEffects();renderVignette();renderHUD(timestamp);}
-  else if(state==='GAME_OVER'){renderBackground();renderTable();renderTableItems();renderCharacters(timestamp);renderEffects();renderVignette();renderHUD(timestamp);renderGameOver(timestamp);}
+  else if(state==='PLAYING'){
+    const shake=GameEngine.getShake();
+    c.save();
+    if(shake>0){c.translate((Math.random()-0.5)*shake,(Math.random()-0.5)*shake);}
+    renderBackground();renderTable();renderTableItems();renderCharacters(timestamp);renderEffects();renderVignette();
+    c.restore();
+    renderHUD(timestamp);
+  }
+  else if(state==='GAME_OVER'){
+    if(lastRenderState!=='GAME_OVER')gameOverStart=timestamp;
+    renderBackground();renderTable();renderTableItems();renderCharacters(timestamp);renderEffects();renderVignette();renderHUD(timestamp);renderGameOver(timestamp);
+  }
+  lastRenderState=state;
   requestAnimationFrame(gameLoop);
 }
 requestAnimationFrame(gameLoop);
