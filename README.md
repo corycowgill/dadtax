@@ -1,4 +1,4 @@
-# Dad Tax Attack!
+# Dad Tax Attack! A Hallucinated Games AI Slop Production! https://www.hallucinatedgames.com/
 
 A single-page browser game where you play as a dad trying to steal pizza slices from his two sons during dinner at a pizza parlor, while they try to block you. Built with zero dependencies — just open `index.html` in a browser and play.
 
